@@ -18,39 +18,26 @@ namespace po = boost::program_options;
  * @param ifstream
  * @return
  */
-EAGLEye::FileType determineFileType(std::ifstream& ifstream)
+EAGLEye::FileType determineFileType(std::ifstream &ifstream, fs::path &path)
 {
     auto curPos = (long) ifstream.tellg();
 
-    uint32_t t;
-    EAGLEye::readGeneric(ifstream, t);
-
-    if (t == 0x00000000)
-    {
-        uint32_t s;
-        EAGLEye::readGeneric(ifstream, s);
-        ifstream.ignore(s);
-        EAGLEye::readGeneric(ifstream, t);
-    }
+    BYTE buf[4];
+    EAGLEye::readGeneric(ifstream, buf);
 
     ifstream.seekg(curPos);
 
-    if (t == 0x00034112)
+    if (buf[0] == 'J' && buf[1] == 'D' && buf[2] == 'L' && buf[3] == 'Z')
     {
-        return EAGLEye::LOCATION_BASE;
+        return EAGLEye::FileType::COMPRESSED;
     }
 
-    if (t == 0x80134000 || t == 0xB3300000)
+    if (buf[0] == 0x12 && buf[1] == 0x41 && buf[2] == 0x03 && buf[3] == 0x00)
     {
-        return EAGLEye::LOCATION_FULL;
+        return EAGLEye::FileType::LOCATION_BASE;
     }
 
-    if (t == 0x00039000)
-    {
-        return EAGLEye::LANGUAGE;
-    }
-
-    return EAGLEye::GENERIC_CHUNKED;
+    return EAGLEye::FileType::NORMAL;
 }
 
 int main(int argc, char **argv)
@@ -75,7 +62,8 @@ int main(int argc, char **argv)
 
         if ((foundGame_ = EAGLEye::gameMap.find(gameId_)) == EAGLEye::gameMap.end())
         {
-            std::cerr << "Unknown game! Possible values: " << boost::algorithm::join(EAGLEye::extract_keys(EAGLEye::gameMap), ", ") << std::endl;
+            std::cerr << "Unknown game! Possible values: "
+                      << boost::algorithm::join(EAGLEye::extract_keys(EAGLEye::gameMap), ", ") << std::endl;
             return 1;
         }
 
@@ -101,130 +89,20 @@ int main(int argc, char **argv)
         {
             std::ifstream stream(filePath.string(), std::ios::in | std::ios::binary);
 
-            EAGLEye::FileType fileType = determineFileType(stream);
+            EAGLEye::FileType fileType = determineFileType(stream, filePath);
 
             switch (foundGame_->second)
             {
                 case 0x2:
                     EAGLEye::MW::HandleFile(filePath, stream, fileType);
                     break;
-                default:break;
+                default:
+                    break;
             }
         }
     } catch (const po::error &ex)
     {
         std::cerr << ex.what() << '\n';
-    }
-
-
-//    std::pair<std::string, std::pair<int, std::string>> matchedGame;
-//    bool didMatch = false;
-//
-//    for (auto &gamePair : gameMap)
-//    {
-//        if (baseBunFile.find(gamePair.first) != std::string::npos)
-//        {
-//            matchedGame = gamePair;
-//            didMatch = true;
-//            break;
-//        }
-//    }
-//
-//    if (!didMatch)
-//    {
-//        std::cout << "Couldn't determine game type" << std::endl;
-//        return 1;
-//    }
-//
-//    int gameId = matchedGame.second.first;
-//
-//    if (gameId != 0x2)
-//    {
-//        std::cout << "Unsupported game" << std::endl;
-//        return 1;
-//    }
-//
-//    std::cout << "Guessing game: " << matchedGame.second.second << std::endl;
-
-    {
-//        std::ifstream baseBunStream(baseBunPath.string(), std::ios::in | std::ios::binary);
-//
-//        {
-//            std::cout << "reading null head" << std::endl;
-//            uint32_t t, s;
-//            EAGLEye::readGeneric(baseBunStream, t);
-//            assert(t == 0x00034112);
-//            EAGLEye::readGeneric(baseBunStream, s);
-//            assert(s == 0x00000000);
-//        }
-//
-//        uintmax_t fileSize = fs::file_size(baseBunPath);
-//
-//        for (int i = 1; i < 0xFFFF && baseBunStream.tellg() < fileSize; i++)
-//        {
-//            std::cout << std::endl;
-//            uint32_t t, s;
-//            EAGLEye::readGeneric(baseBunStream, t);
-//            EAGLEye::readGeneric(baseBunStream, s);
-//
-//            printf("0x%08x\n", t);
-//            EAGLEye::dumpBytes(baseBunStream, 256);
-//
-//            switch (t)
-//            {
-//                case 0x80034147: // BCHUNK_TRACKPATH
-//                    switch (gameId)
-//                    {
-//                        case 0x2:
-//                            EAGLEye::MW::ParseTrackPathChunk(baseBunStream, t, s);
-//                        default:
-//                            break;
-//                    }
-//
-//                    break;
-//                case 0x00034110: // BCHUNK_TRACKSTREAMER_0
-//                    switch (gameId)
-//                    {
-//                        case 0x2:
-//                        {
-//                            auto sectionsChunk = EAGLEye::MW::ParseTrackStreamerSectionsChunk(baseBunStream, t, s);
-//
-//                            std::cout << "Sections (" << sectionsChunk->sections.size() << "):" << std::endl;
-//                            for (auto &section : sectionsChunk->sections)
-//                            {
-//                                std::cout << section.id << std::endl;
-//                            }
-//
-//                            break;
-//                        }
-//                        default:
-//                            break;
-//                    }
-//                    break;
-//                case 0x00e34010: // BCHUNK_EAGLANIMATIONS
-//                    switch (gameId)
-//                    {
-//                        case 0x2:
-//                            EAGLEye::MW::ParseAnimationsChunk(baseBunStream, t, s);
-//                        default:
-//                            break;
-//                    }
-//
-//                    break;
-//                case 0x00034158: // BCHUNK_VISIBLESECTION v1
-//                    switch (gameId)
-//                    {
-//                        case 0x2:
-//                            EAGLEye::MW::ParseVisibleSectionChunk(baseBunStream, t, s);
-//                        default:
-//                            break;
-//                    }
-//                    break;
-//                default:
-//                    baseBunStream.ignore(s);
-//                    break;
-//            }
-//        }
     }
 
     return 0;

@@ -18,11 +18,9 @@ namespace EAGLEye
         std::shared_ptr<EAGLEye::VisibleSectionChunk> ParseVisibleSectionChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
 
         void HandleFile(boost::filesystem::path& path, std::ifstream& ifstream, EAGLEye::FileType fileType);
-        void HandleLanguageFile(std::ifstream& ifstream);
-        void HandleLocationBaseFile(std::ifstream& ifstream);
-        void HandleLocationFullFile(std::ifstream& ifstream);
-        void HandleGlobalFile(std::ifstream& ifstream);
-        void HandleGenericChunkedFile(std::ifstream& ifstream);
+        void HandleLocationBaseFile(boost::filesystem::path &path, std::ifstream &ifstream);
+        void HandleRegularFile(boost::filesystem::path &path, std::ifstream &ifstream);
+        void HandleCompressedFile(boost::filesystem::path &path, std::ifstream &ifstream);
     }
 }
 

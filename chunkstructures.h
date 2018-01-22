@@ -8,7 +8,8 @@ namespace EAGLEye
     /**
      * oh heck it seems like these are embedded ELF files please help
      */
-    struct AnimationsStruct_s
+    //
+    struct PACK AnimationsStruct_s
     {
         BYTE pad[8];
 
@@ -40,18 +41,54 @@ namespace EAGLEye
          * Back to animations
          */
         BYTE postPad[12];
+        short n;
     };
 
-    struct TrackStreamerSection_s
+    struct PACK TrackStreamerSection_s
     {
         char id[4];
-        BYTE data[88];
+        unsigned int Unk1;
+        unsigned int StreamChunkNumber;
+        unsigned int Unk2;
+        unsigned int MasterStreamChunkNumber;
+        unsigned int MasterStreamChunkOffset;
+        unsigned int Size1, Size2, Size3;
+        float X, Y, Z;
+        unsigned int StreamChunkHash;
+        BYTE data[40];
     };
 
-    struct VisibleSectionStruct_s
+    struct PACK LanguageFileHeader_s
+    {
+        unsigned int id; // should always be 0x00000010 (10 00 00 00)
+        unsigned short numberOfStrings; // same across each individual language, of course
+        unsigned int unknown1; // usually 0x00001814 in MW05 (14 18 00 00)
+        unsigned int unknown2;
+    };
+
+    struct PACK VisibleSectionStruct_s
     {
         BYTE pad[0x08];
         char name[40];
+    };
+
+    struct PACK FNGHeader_s
+    {
+        char id[3]; // 'FEn'
+
+    };
+
+    struct PACK LanguageItemEntry
+    {
+        unsigned int itemId;
+        unsigned int unknown1;
+    };
+
+    struct FontHeader_s
+    {
+        std::string fontFileName;
+        std::string fontFilePath;
+        std::string bmp1, bmp2;
     };
 }
 

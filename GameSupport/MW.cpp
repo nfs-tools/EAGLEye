@@ -26,10 +26,8 @@ namespace EAGLEye
             AnimationsStruct_s animationsStruct_s{};
 
             bytesRead += readGeneric(ifstream, animationsStruct_s);
-            ifstream.ignore(2);
-            bytesRead += 2;
 
-//            dumpBytes(ifstream, 256);
+            dumpBytes(ifstream, 256);
             ifstream.ignore(size - bytesRead);
 
             return std::make_shared<EAGLEye::EAGLAnimationsChunk>(chunk);
@@ -71,55 +69,113 @@ namespace EAGLEye
         {
             switch (fileType)
             {
-                case EAGLEye::LANGUAGE:
-                    HandleLanguageFile(ifstream);
-                    break;
-                case EAGLEye::LOCATION_FULL:
-                    HandleLocationFullFile(ifstream);
+                case EAGLEye::COMPRESSED:
+                    HandleCompressedFile(path, ifstream);
                     break;
                 case EAGLEye::LOCATION_BASE:
-                    HandleLocationBaseFile(ifstream);
+                    HandleLocationBaseFile(path, ifstream);
                     break;
-                case EAGLEye::GLOBAL:
-                    HandleGlobalFile(ifstream);
-                case EAGLEye::GENERIC_CHUNKED:
                 default:
-                    HandleGenericChunkedFile(ifstream);
+                    HandleRegularFile(path, ifstream);
+                    break;
             }
         }
 
-        void HandleLanguageFile(std::ifstream &ifstream)
+        void HandleLocationBaseFile(boost::filesystem::path &path, std::ifstream &ifstream)
         {
-            std::cout << "Language file!" << std::endl;
+            std::cout << "[!] Handling base location file" << std::endl;
+            HandleRegularFile(path, ifstream);
+
+            boost::filesystem::path streamPath = path.parent_path();
+            streamPath += "/STREAM";
+            streamPath += path.filename();
+
+            if (boost::filesystem::exists(streamPath))
+            {
+                std::cout << "[!] Handling map stream file" << std::endl;
+
+                std::ifstream streamFileStream(streamPath.string(), std::ios::binary); // streamFileStream........ he comes... nOOOOoooooo
+                HandleRegularFile(streamPath, streamFileStream);
+            }
         }
 
-        void HandleLocationBaseFile(std::ifstream &ifstream)
+        void HandleRegularFile(boost::filesystem::path &path, std::ifstream &ifstream)
         {
-            std::cout << "loc base file!" << std::endl;
+            std::cout << "extreme regular file xd" << std::endl;
+
+            uintmax_t fileSize = boost::filesystem::file_size(path);
+
+            for (int i = 0; i < 0xFFFF && ifstream.tellg() < fileSize; i++)
+            {
+                uint32_t id, size;
+                readGeneric(ifstream, id);
+                readGeneric(ifstream, size);
+
+                printf("0x%08x - %s\n", id, EAGLEye::chunkIdMap.find(id)->second.c_str());
+
+                ifstream.ignore(size);
+            }
+        }
+
+        void HandleCompressedFile(boost::filesystem::path &path, std::ifstream &ifstream)
+        {
+            std::cout << "extreme compressed file xd" << std::endl;
+
+            auto pos = (long) ifstream.tellg();
 
             {
-                std::cout << "reading null head" << std::endl;
-                uint32_t t, s;
-                EAGLEye::readGeneric(ifstream, t);
-                assert(t == 0x00034112);
-                EAGLEye::readGeneric(ifstream, s);
-                assert(s == 0x00000000);
+                BYTE header[5];
+                readGeneric(ifstream, header);
+                assert(header[0] == 'J' && header[1] == 'D' && header[2] == 'L' && header[3] == 'Z' &&
+                       header[4] == 0x02);
             }
-        }
 
-        void HandleLocationFullFile(std::ifstream &ifstream)
-        {
-            std::cout << "loc full file!" << std::endl;
-        }
+            {
+                BYTE t;
+                readGeneric(ifstream, t);
+                assert(t == 0x10);
+            }
 
-        void HandleGlobalFile(std::ifstream &ifstream)
-        {
-            std::cout << "global file!" << std::endl;
-        }
+            {
+                int16_t n;
+                readGeneric(ifstream, n);
+                assert(n == 0x0000);
+            }
 
-        void HandleGenericChunkedFile(std::ifstream &ifstream)
-        {
-            std::cout << "generic file!" << std::endl;
+            size_t uncompressedLength, compressedLength;
+            unsigned char uncompressedLength_[4];
+            unsigned char compressedLength_[4];
+
+            readGeneric(ifstream, uncompressedLength_);
+            readGeneric(ifstream, compressedLength_);
+
+            uncompressedLength = static_cast<size_t>(BitConverter::ToInt32(uncompressedLength_, 0));
+            compressedLength = static_cast<size_t>(BitConverter::ToInt32(compressedLength_, 0));
+
+            std::cout << uncompressedLength << "/" << compressedLength << std::endl;
+
+            ifstream.seekg(pos);
+
+            std::vector<BYTE> compressed;
+            compressed.resize(compressedLength);
+
+            ifstream.read((char *) &compressed[0], compressed.size());
+
+            std::vector<BYTE> uncompressed = JDLZ::decompress(compressed);
+            assert(uncompressed.size() == uncompressedLength);
+
+            boost::filesystem::path decompressedPath = path;
+            decompressedPath += ".tmp";
+
+            {
+                std::ofstream decompressedStream(decompressedPath.string(), std::ios::binary);
+                decompressedStream.write((const char *) uncompressed.data(), uncompressedLength);
+            }
+
+            {
+                std::ifstream decompressedStream(decompressedPath.string(), std::ios::binary);
+                HandleRegularFile(decompressedPath, decompressedStream);
+            }
         }
     }
 }
