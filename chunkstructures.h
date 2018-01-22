@@ -40,8 +40,7 @@ namespace EAGLEye
         /**
          * Back to animations
          */
-        BYTE postPad[12];
-        short n;
+        BYTE postPad[14];
     };
 
     struct PACK TrackStreamerSection_s
@@ -75,20 +74,12 @@ namespace EAGLEye
     struct PACK FNGHeader_s
     {
         char id[3]; // 'FEn'
-
     };
 
-    struct PACK LanguageItemEntry
+    struct PACK LanguageEntry_s
     {
         unsigned int itemId;
         unsigned int unknown1;
-    };
-
-    struct FontHeader_s
-    {
-        std::string fontFileName;
-        std::string fontFilePath;
-        std::string bmp1, bmp2;
     };
 }
 

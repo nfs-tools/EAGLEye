@@ -11,6 +11,8 @@
 
 #define PACK __attribute__((__packed__))
 
+typedef float vec3[3];
+typedef float vec4[4];
 typedef unsigned char BYTE;
 
 namespace EAGLEye
@@ -177,6 +179,22 @@ namespace EAGLEye
     inline bool instanceof(const T *ptr)
     {
         return dynamic_cast<const Base *>(ptr) != nullptr;
+    }
+
+    template<typename N>
+    N PaddingAlign(N num, int alignTo)
+    {
+        if (num % alignTo == 0)
+            return 0;
+        return alignTo - (num % alignTo);
+    }
+
+    template <typename d=void>
+    long AlignFS(std::ifstream &ifstream, long bytes)
+    {
+        long b2skip = PaddingAlign(ifstream.tellg(), bytes);
+        ifstream.ignore(b2skip);
+        return b2skip;
     }
 
     template<typename Data>
