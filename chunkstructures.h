@@ -81,6 +81,20 @@ namespace EAGLEye
         unsigned int itemId;
         unsigned int unknown1;
     };
+
+    struct PACK GEO_FACE
+    {
+        uint16_t vA;
+        uint16_t vB;
+        uint16_t vC;
+    };
+
+    struct PACK GEO_VERTEX
+    {
+        vec3 v_pos;
+        uint32_t v_unk;
+        vec2 v_uv;
+    };
 }
 
 #endif //EAGLEYE_STRUCTURES_H

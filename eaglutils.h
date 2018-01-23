@@ -11,6 +11,7 @@
 
 #define PACK __attribute__((__packed__))
 
+typedef float vec2[2];
 typedef float vec3[3];
 typedef float vec4[4];
 typedef unsigned char BYTE;
@@ -136,6 +137,8 @@ namespace EAGLEye
             {0x80037020, "BCHUNK_ANIMSCENEDATA"},
             {0x0003b811, "BCHUNK_EVENTSEQUENCE"},
             {0x00034191, "Unknown TrackStreamer"},
+            {0x80134001, "MapStream File Info"},
+            {0x80134010, "MapStream Part"},
             {0x00000000, "Null Chunk"}
     };
 
@@ -196,6 +199,8 @@ namespace EAGLEye
         ifstream.ignore(b2skip);
         return b2skip;
     }
+
+    BYTE readByte(std::ifstream &stream);
 
     template<typename Data>
     void hexdump(FILE *stream, Data *data, size_t len = sizeof(Data))

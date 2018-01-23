@@ -15,6 +15,89 @@ namespace EAGLEye
 
         std::shared_ptr<EAGLEye::GeometryChunk> ParseGeometryChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
         {
+            size_t bytesRead = 0;
+            auto runTo = ((long) ifstream.tellg()) + size;
+
+            GeometryFileInfo_s geometryFileInfo{};
+
+            for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
+            {
+                size_t scBytesRead = 0;
+
+                uint32_t scId, scSize;
+                bytesRead += readGeneric(ifstream, scId);
+                bytesRead += readGeneric(ifstream, scSize);
+
+                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
+
+                // ifstream.ignore(scSize); bytesRead += scSize;
+                switch (scId)
+                {
+                    case 0x80134001:
+                    {
+                        // parse file info
+                        {
+                            uint32_t bId, bSize;
+                            scBytesRead += readGeneric(ifstream, bId);
+                            assert(bId == 0x00134002);
+                            scBytesRead += readGeneric(ifstream, bSize);
+                            scBytesRead += readGeneric(ifstream, geometryFileInfo);
+                        }
+
+                        // sub-block 3
+                        {
+                            uint32_t bId, bSize;
+                            scBytesRead += readGeneric(ifstream, bId);
+                            assert(bId == 0x00134003);
+                            scBytesRead += readGeneric(ifstream, bSize);
+                            ifstream.ignore(bSize);
+                            scBytesRead += bSize;
+                        }
+
+                        // null sub-block 8
+                        {
+                            uint32_t bId, bSize;
+                            scBytesRead += readGeneric(ifstream, bId);
+                            assert(bId == 0x80134008);
+                            scBytesRead += readGeneric(ifstream, bSize);
+                        }
+
+                        bytesRead += scBytesRead;
+
+//                        dumpBytes(ifstream, scSize - scBytesRead);
+
+                        std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
+                        ifstream.ignore(scSize - scBytesRead);
+                        bytesRead += scSize - scBytesRead;
+                        break;
+                    }
+                    case 0x80134010:
+                    {
+                        // sub-block 11
+                        {
+                            uint32_t bId, bSize;
+                            scBytesRead += readGeneric(ifstream, bId);
+                            assert(bId == 0x00134011);
+                            scBytesRead += readGeneric(ifstream, bSize);
+                        }
+
+                        dumpBytes(ifstream, 128);
+                        bytesRead += scBytesRead;
+                        ifstream.ignore(scSize - scBytesRead);
+                        bytesRead += scSize - scBytesRead;
+                        break;
+                    }
+                    default:
+                    {
+                        ifstream.ignore(scSize);
+                        bytesRead += scSize;
+                        break;
+                    }
+                }
+            }
+
+            ifstream.ignore(size - bytesRead);
+
             return std::make_shared<EAGLEye::GeometryChunk>(EAGLEye::GeometryChunk{id, size});
         }
 
@@ -116,164 +199,9 @@ namespace EAGLEye
 
                 switch (id)
                 {
-                    case 0x80134000:
+                    case 0x80134000: // 0x80134000
                     {
-                        size_t bytesRead = 0;
-
-                        uint32_t ni, ns;
-                        bytesRead += readGeneric(ifstream, ni);
-                        assert(ni == 0);
-                        bytesRead += readGeneric(ifstream, ns);
-                        ifstream.ignore(ns);
-                        bytesRead += ns;
-
-
-                        // sub-chunk 1
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x80134001);
-                            bytesRead += readGeneric(ifstream, scs);
-                        }
-
-                        // sub-chunk 2
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x00134002);
-                            bytesRead += readGeneric(ifstream, scs);
-
-                            GeometryFileInfo_s geometryFileInfo{};
-                            bytesRead += readGeneric(ifstream, geometryFileInfo);
-
-                            std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
-                        }
-
-                        // sub-chunk 3
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x00134003);
-                            bytesRead += readGeneric(ifstream, scs);
-
-                            ifstream.ignore(scs);
-                            bytesRead += scs;
-                        }
-                        // sub-chunk 8
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x80134008);
-                            bytesRead += readGeneric(ifstream, scs);
-                        }
-
-                        // sub-chunk 10
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x80134010);
-                            bytesRead += readGeneric(ifstream, scs);
-                        }
-
-                        // sub-chunk 11
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x00134011);
-                            bytesRead += readGeneric(ifstream, scs);
-
-                            GeoEntityBlock_s geoEntityBlock{};
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.padding);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.blnk1);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.blnk2);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.blnk3);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkA);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkB_a);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkB_b);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkC);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkD);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkE);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.vec1);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.blnk4);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.vec2);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.blnk5);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.matrix64);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkF);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkG);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.ParA);
-                            bytesRead += readGeneric(ifstream, geoEntityBlock.unkH);
-
-                            if (geoEntityBlock.padding[0] == 0x11)
-                            {
-                                ifstream.ignore(12);
-                                bytesRead += 12;
-                            } else
-                            {
-                                ifstream.ignore(4);
-                                bytesRead += 4;
-                            }
-
-                            std::stringstream nameStream;
-
-                            BYTE rb;
-
-                            while (true)
-                            {
-                                readGeneric(ifstream, rb);
-                                bytesRead++;
-
-                                if (rb == 0x00)
-                                {
-                                    break;
-                                }
-
-                                if (rb >= 32 && rb < 127)
-                                    nameStream << rb;
-                            }
-
-                            while (rb == 0x00)
-                            {
-                                bytesRead++;
-                                readGeneric(ifstream, rb);
-                            }
-
-                            bytesRead--;
-                            ifstream.seekg(-1, ifstream.cur);
-                        }
-
-                        // sub-chunk 12
-                        {
-                            uint32_t sci, scs;
-                            bytesRead += readGeneric(ifstream, sci);
-                            assert(sci == 0x00134012);
-                            bytesRead += readGeneric(ifstream, scs);
-
-                            ifstream.ignore(scs);
-                            bytesRead += scs;
-                        }
-
-                        // weird 1
-                        {
-                            uint32_t wi, ws;
-                            bytesRead += readGeneric(ifstream, wi);
-                            bytesRead += readGeneric(ifstream, ws);
-
-                            if (wi == 0x00134013)
-                            {
-                                ifstream.ignore(ws); bytesRead += ws;
-                                bytesRead += readGeneric(ifstream, wi);
-                                bytesRead += readGeneric(ifstream, ws);
-                            }
-
-                            if (wi != 0x80134100)
-                            {
-                                printf("huh 0x%08x\n", wi);
-                            }
-                        }
-
-                        dumpBytes(ifstream, 256);
-
-                        ifstream.ignore(size - bytesRead);
+                        ParseGeometryChunk(ifstream, id, size);
 
                         break;
                     }

@@ -2,6 +2,11 @@
 
 namespace EAGLEye
 {
+    BYTE readByte(std::ifstream &stream)
+    {
+        return (BYTE) stream.get();
+    }
+
     void dumpBytes(std::ifstream &stream, size_t bytes)
     {
         auto curPos = stream.tellg();

@@ -47,6 +47,8 @@ namespace EAGLEye
             uint32_t unkF, unkG;
             uint32_t ParA[2];
             uint32_t unkH;
+            vec4 vec3;
+            char name[32];
         };
 
         std::shared_ptr<EAGLEye::TrackPathChunk> ParseTrackPathChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
