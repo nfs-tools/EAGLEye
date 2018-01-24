@@ -1,16 +1,72 @@
 #include "MW.h"
 #include <iostream>
+#include <algorithm>
+#include <boost/algorithm/clamp.hpp>
 
 namespace EAGLEye
 {
     namespace MW
     {
+        MWBINChunk g_chunks[] = {
+                {ID_FILE_HEADER,     0x00, "File Header"},
+                {ID_DATA_HEADER,     0x00, "Data Header"}, //includes hash table
+                {ID_BIN_ARCHIVE,     0x00, "BIN archive"},
+                {ID_HASH_TABLE,      0x00, "hash table?"},
+                {ID_OBJECTS_LAYOUT,  0x00, "hash mapping?"},
+                {ID_BLANK,           0x00, "blank?"},
+                {ID_ALIGN,           0x00, "align block?"},
+                {ID_OBJECT,          0x00, "Object"},
+                {ID_OBJECT_HEADER,   0x10, "Object header?"},
+                {ID_TEXTURE_USAGE,   0x00, "Texture Usage"},//material burst
+                {ID_UNKNOWN2,        0x00, "unknown#2"},
+                {ID_UNKNOWN3,        0x80, "unknown#2"},
+                {ID_TEXTURE_APPLY,   0x00, "Texture apply modes"},
+                {ID_MOUNT_POINTS,    0x10, "mount points"},
+                {ID_MESH_HEADER,     0x00, "mesh header"},
+                {ID_MESH_DESCRIPTOR, 0x10, "mesh descriptor"},
+                {ID_VERTICES,        0x10, "vertices"},     //#15.10.2007 align changed from 0x80 to 0x10
+                {ID_UC_VERTICES,     0x10, "UC vertices"},
+                {ID_UC_MAT_ASSIGN,   0x80, "mat/sh assign UC"},
+                {ID_MAT_ASSIGN,      0x10, "mat/sh assign?"},
+                {ID_TRIANGLES,       0x10, "triangles"},
+                {ID_UC_TRIANGLES,    0x10, "UC triangles"},
+                {ID_MATERIAL_NAME,   0x00, "material name"},
+                {ID_UNKNOWN6,        0x00, "unknown#6"},
+                {ID_UNKNOWN7,        0x00, "unknown#7"}, // looks like 0x4003
+                {ID_UNKNOWN8,        0x00, "unknown#8"}, // looks like 0x4004
+
+
+                {ID_ALIGN,           0x00, nullptr},
+        };
+
         std::shared_ptr<EAGLEye::TrackPathChunk>
         ParseTrackPathChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
         {
             ifstream.ignore(size);
 
             return std::make_shared<EAGLEye::TrackPathChunk>(EAGLEye::TrackPathChunk{id, size});
+        }
+
+        size_t HandleSubchunkParts(std::ifstream &ifstream, uint32_t id, uint32_t size)
+        {
+            size_t bytesRead = 0;
+            auto runTo = ((long) ifstream.tellg()) + size;
+
+            for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
+            {
+                uint32_t partId, partSize;
+                size_t partBytesRead = 0;
+                bytesRead += readGeneric(ifstream, partId);
+                bytesRead += readGeneric(ifstream, partSize);
+
+                printf("    > Part #%d: 0x%08x / 0x%06x\n", i + 1, partId, BIN_ID(partId));
+
+                bytesRead += partBytesRead;
+                ifstream.ignore(partSize - partBytesRead);
+                bytesRead += partSize - partBytesRead;
+            }
+
+            return bytesRead;
         }
 
         std::shared_ptr<EAGLEye::GeometryChunk> ParseGeometryChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
@@ -23,77 +79,30 @@ namespace EAGLEye
             for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
             {
                 size_t scBytesRead = 0;
-
                 uint32_t scId, scSize;
+
                 bytesRead += readGeneric(ifstream, scId);
                 bytesRead += readGeneric(ifstream, scSize);
 
                 printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
 
-                // ifstream.ignore(scSize); bytesRead += scSize;
                 switch (scId)
                 {
                     case 0x80134001:
-                    {
-                        // parse file info
-                        {
-                            uint32_t bId, bSize;
-                            scBytesRead += readGeneric(ifstream, bId);
-                            assert(bId == 0x00134002);
-                            scBytesRead += readGeneric(ifstream, bSize);
-                            scBytesRead += readGeneric(ifstream, geometryFileInfo);
-                        }
-
-                        // sub-block 3
-                        {
-                            uint32_t bId, bSize;
-                            scBytesRead += readGeneric(ifstream, bId);
-                            assert(bId == 0x00134003);
-                            scBytesRead += readGeneric(ifstream, bSize);
-                            ifstream.ignore(bSize);
-                            scBytesRead += bSize;
-                        }
-
-                        // null sub-block 8
-                        {
-                            uint32_t bId, bSize;
-                            scBytesRead += readGeneric(ifstream, bId);
-                            assert(bId == 0x80134008);
-                            scBytesRead += readGeneric(ifstream, bSize);
-                        }
-
-                        bytesRead += scBytesRead;
-
-//                        dumpBytes(ifstream, scSize - scBytesRead);
-
-                        std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
-                        ifstream.ignore(scSize - scBytesRead);
-                        bytesRead += scSize - scBytesRead;
-                        break;
-                    }
                     case 0x80134010:
                     {
-                        // sub-block 11
-                        {
-                            uint32_t bId, bSize;
-                            scBytesRead += readGeneric(ifstream, bId);
-                            assert(bId == 0x00134011);
-                            scBytesRead += readGeneric(ifstream, bSize);
-                        }
-
-                        dumpBytes(ifstream, 128);
-                        bytesRead += scBytesRead;
-                        ifstream.ignore(scSize - scBytesRead);
-                        bytesRead += scSize - scBytesRead;
+                        scBytesRead += HandleSubchunkParts(ifstream, scId, scSize);
                         break;
                     }
                     default:
-                    {
-                        ifstream.ignore(scSize);
-                        bytesRead += scSize;
                         break;
-                    }
                 }
+
+                dumpBytes(ifstream, boost::algorithm::clamp(scSize, 0, 256));
+
+                bytesRead += scBytesRead;
+                ifstream.ignore(scSize - scBytesRead);
+                bytesRead += scSize - scBytesRead;
             }
 
             ifstream.ignore(size - bytesRead);

@@ -11,6 +11,66 @@ namespace EAGLEye
 {
     namespace MW
     {
+#pragma pack(push, 2)
+        struct tVertex
+        {
+            float x, y, z;
+            float nx, ny, nz;
+            unsigned int color;
+            float u, v;
+        };
+#pragma pack(pop)
+
+        enum eBinChunkID
+        {
+            ID_FILE_HEADER = 0x134000,
+            ID_DATA_HEADER = 0x134001,
+            ID_BIN_ARCHIVE = 0x134002,
+            ID_HASH_TABLE = 0x134003,//objects hash withing this bin
+            ID_OBJECTS_LAYOUT = 0x134004,
+            ID_BLANK = 0x134008,
+            ID_ALIGN = 0x000000,
+            ID_OBJECT = 0x134010,
+            ID_OBJECT_HEADER = 0x134011,
+            ID_TEXTURE_USAGE = 0x134012,
+            ID_UNKNOWN2 = 0x134013,//?
+            ID_UNKNOWN3 = 0x134F01,//?
+            ID_TEXTURE_APPLY = 0x134015,
+            ID_MOUNT_POINTS = 0x13401A,
+            ID_MESH_HEADER = 0x134100,
+            ID_MESH_DESCRIPTOR = 0x134900,
+            ID_VERTICES = 0x134B01,
+            ID_MAT_ASSIGN = 0x134B02,//?
+            ID_UC_MAT_ASSIGN = 0x134902,
+            ID_UC_VERTICES = 0x134901,
+            ID_UC_TRIANGLES = 0x134903,
+            ID_TRIANGLES = 0x134B03,
+            ID_MATERIAL_NAME = 0x134C02,
+            ID_UNKNOWN6 = 0x134017,//?
+            ID_UNKNOWN7 = 0x134018,//?
+            ID_UNKNOWN8 = 0x134019,//?
+
+            ID_TEX_FILE = 0x300000,
+            ID_TEX_UNK1 = 0x310000,
+            ID_TEX_UNK2 = 0x310001,
+            ID_TEX_IDLIST = 0x310002,
+            ID_TEX_LAYOUT = 0x310003,
+            ID_TEX_HEADERSLIST = 0x310004,
+            ID_TEX_TYPESLIST = 0x310005,
+            ID_TEX_UNK4 = 0x320000,//data container?
+            ID_TEX_UNK5 = 0x320001,//data container header?
+            ID_TEX_BINARYDATA = 0x320002,
+
+            ID_FORCE_DWORD = 0x80FFFFFF
+        };
+
+        struct MWBINChunk
+        {
+            eBinChunkID id;
+            BYTE padding;
+            const char *m_pszType;
+        };
+
         struct PACK GeometryFileInfo_s
         {
             uint32_t blnk1;
@@ -51,15 +111,26 @@ namespace EAGLEye
             char name[32];
         };
 
-        std::shared_ptr<EAGLEye::TrackPathChunk> ParseTrackPathChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
-        std::shared_ptr<EAGLEye::GeometryChunk> ParseGeometryChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
-        std::shared_ptr<EAGLEye::EAGLAnimationsChunk> ParseAnimationsChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
-        std::shared_ptr<EAGLEye::TrackStreamerSectionsChunk> ParseTrackStreamerSectionsChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
-        std::shared_ptr<EAGLEye::VisibleSectionChunk> ParseVisibleSectionChunk(std::ifstream& ifstream, uint32_t id, uint32_t size);
+        std::shared_ptr<EAGLEye::TrackPathChunk>
+        ParseTrackPathChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
 
-        void HandleFile(boost::filesystem::path& path, std::ifstream& ifstream, EAGLEye::FileType fileType);
+        std::shared_ptr<EAGLEye::GeometryChunk> ParseGeometryChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        std::shared_ptr<EAGLEye::EAGLAnimationsChunk>
+        ParseAnimationsChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        std::shared_ptr<EAGLEye::TrackStreamerSectionsChunk>
+        ParseTrackStreamerSectionsChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        std::shared_ptr<EAGLEye::VisibleSectionChunk>
+        ParseVisibleSectionChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        void HandleFile(boost::filesystem::path &path, std::ifstream &ifstream, EAGLEye::FileType fileType);
+
         void HandleLocationBaseFile(boost::filesystem::path &path, std::ifstream &ifstream);
+
         void HandleRegularFile(boost::filesystem::path &path, std::ifstream &ifstream);
+
         void HandleCompressedFile(boost::filesystem::path &path, std::ifstream &ifstream);
     }
 }
