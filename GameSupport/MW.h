@@ -11,15 +11,22 @@ namespace EAGLEye
 {
     namespace MW
     {
-#pragma pack(push, 2)
-        struct tVertex
+//#pragma pack(push, 2)
+        struct PACK tVertex
         {
-            float x, y, z;
-            float nx, ny, nz;
-            unsigned int color;
-            float u, v;
+            float x, y, z; // 0+(4*3)=12
+            float nx, ny, nz; // 12+(4*3)=24
+            unsigned int color; // 24+4=28
+            float u, v; // 28+(4*2)=36
         };
-#pragma pack(pop)
+
+        struct PACK tFace
+        {
+            uint16_t vA;
+            uint16_t vB;
+            uint16_t vC;
+        };
+//#pragma pack(pop)
 
         enum eBinChunkID
         {

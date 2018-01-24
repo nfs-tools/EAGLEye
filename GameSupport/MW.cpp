@@ -59,7 +59,177 @@ namespace EAGLEye
                 bytesRead += readGeneric(ifstream, partId);
                 bytesRead += readGeneric(ifstream, partSize);
 
+                long nAlign = 0;
+                long nChunkIndex;
+                for (nChunkIndex = 0; g_chunks[nChunkIndex].m_pszType != nullptr; nChunkIndex++)
+                    if (BIN_ID(partId) == BIN_ID(g_chunks[nChunkIndex].id))
+                        break;
+
+                if (g_chunks[nChunkIndex].padding != 0)
+                {
+                    DWORD dw = 0x11111111;
+                    while (0x11111111 == dw)
+                    {
+                        nAlign += 4;
+                        readGeneric(ifstream, dw);
+                    }
+
+                    ifstream.seekg(-4, ifstream.cur);
+                    nAlign -= 4;
+                }
+
+                bytesRead += nAlign;
+                partSize -= nAlign;
+
                 printf("    > Part #%d: 0x%08x / 0x%06x\n", i + 1, partId, BIN_ID(partId));
+
+                switch (BIN_ID(partId))
+                {
+                    case ID_OBJECT_HEADER:
+                    {
+                        std::cout << "        Header" << std::endl;
+
+                        ifstream.ignore(16);
+                        partBytesRead += 16; // 3 zeroes and an unknown
+                        ifstream.seekg(4, ifstream.cur);
+                        partBytesRead += 4;
+
+                        long numTris;
+                        partBytesRead += readGeneric(ifstream, numTris);
+                        ifstream.ignore(0xC - sizeof(numTris));
+                        partBytesRead += 0xC - sizeof(numTris);
+
+                        Point3D ptMin{}, ptMax{};
+                        Matrix matrix{};
+
+                        partBytesRead += readGeneric(ifstream, ptMin);
+                        partBytesRead += readGeneric(ifstream, ptMax);
+                        partBytesRead += readGeneric(ifstream, matrix);
+
+                        ifstream.ignore(32);
+                        partBytesRead += 32;
+                        long headerSize = 160;
+
+                        DWORD dwUnk4[6];
+                        partBytesRead += readGeneric(ifstream, dwUnk4[0]);
+
+                        if (dwUnk4[0] == 0)
+                        {
+                            ifstream.read((char *) &dwUnk4[1], 20);
+                            partBytesRead += 20;
+                            headerSize += 0x18;
+
+                            partBytesRead += readGeneric(ifstream, dwUnk4[0]);
+
+                            if (dwUnk4[0] == 0)
+                            {
+                                ifstream.read((char *) &dwUnk4[1], 12);
+                                headerSize += 0x10;
+                            } else
+                            {
+                                ifstream.seekg(-4, ifstream.cur);
+                                partBytesRead -= 4;
+                            }
+                        } else
+                        {
+                            ifstream.seekg(-4, ifstream.cur);
+                            partBytesRead -= 4;
+                        }
+
+                        size_t nameLen = (size_t) partSize - headerSize + 1;
+                        char name[nameLen];
+                        ifstream.read(name, nameLen - 1);
+                        partBytesRead += nameLen - 1;
+                        std::cout << name << std::endl;
+
+                        dumpBytes(ifstream, boost::algorithm::clamp(partSize - partBytesRead, 0, 256));
+                        break;
+                    }
+                    case ID_TEXTURE_USAGE:
+                    {
+//                        std::cout << "        Texture Usage" << std::endl;
+
+                        long numTextures = partSize >> 3;
+
+//                        std::cout << "        Textures: " << numTextures << std::endl;
+
+                        for (int j = 0; j < numTextures; j++)
+                        {
+                            int32_t hash;
+                            partBytesRead += readGeneric(ifstream, hash);
+                            ifstream.ignore(4);
+                            partBytesRead += 4;
+                        }
+
+                        break;
+                    }
+                    case ID_MESH_HEADER:
+                    {
+//                        std::cout << "        Mesh Header" << std::endl;
+//                        dumpBytes(ifstream, boost::algorithm::clamp(partSize, 0, 384));
+                        partBytesRead += HandleSubchunkParts(ifstream, partId, partSize);
+
+                        break;
+                    }
+                    case ID_MESH_DESCRIPTOR:
+                    {
+//                        std::cout << "        Mesh Descriptor" << std::endl;
+                        break;
+                    }
+                    case ID_MAT_ASSIGN:
+                    {
+//                        std::cout << "        Material Assignment" << std::endl;
+                        break;
+                    }
+                    case ID_TRIANGLES:
+                    {
+//                        std::cout << "        Faces" << std::endl;
+//                        std::cout << "        " << partSize << " / " << sizeof(tFace) * (partSize / sizeof(tFace)) << std::endl;
+
+                        for (size_t j = 0; j < partSize / sizeof(tFace); j++)
+                        {
+                            tFace face{};
+                            partBytesRead += readGeneric(ifstream, face);
+//                            printf("%d/%d/%d\n", face.vA + 1, face.vB + 1, face.vC + 1);
+                        }
+
+                        break;
+                    }
+                    case ID_VERTICES:
+                    {
+//                        std::cout << "        Vertices" << std::endl;
+
+                        for (size_t j = 0; j < partSize / sizeof(tVertex); j++)
+                        {
+                            tVertex vertex{};
+                            partBytesRead += readGeneric(ifstream, vertex);
+
+                            if (j % 5 == 0 && (vertex.x > std::numeric_limits<float>::max() ||
+                                               vertex.x < std::numeric_limits<float>::min()))
+                            {
+                                reinterpret_cast<int &>(vertex.x) |= 2;
+                            }
+
+//                            printf("%.4f/%.4f/%.4f\n", vertex.x, vertex.y, vertex.z);
+                        }
+
+//                        std::cout << "        " << partSize << " / " << sizeof(tVertex) * (partSize / sizeof(tVertex)) << std::endl;
+//                        float data[partSize >> 2];
+//                        ifstream.read((char *) &data[0], sizeof(data));
+//                        partBytesRead += sizeof(data);
+//                        partBytesRead += readGeneric(ifstream, data);
+//                        dumpBytes(ifstream, partSize - partBytesRead);
+
+                        break;
+                    }
+                    case ID_MATERIAL_NAME:
+                    {
+//                        std::cout << "        Material Name" << std::endl;
+                        break;
+                    }
+                    default:
+                        break;
+                }
 
                 bytesRead += partBytesRead;
                 ifstream.ignore(partSize - partBytesRead);
@@ -97,8 +267,6 @@ namespace EAGLEye
                     default:
                         break;
                 }
-
-                dumpBytes(ifstream, boost::algorithm::clamp(scSize, 0, 256));
 
                 bytesRead += scBytesRead;
                 ifstream.ignore(scSize - scBytesRead);
