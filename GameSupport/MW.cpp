@@ -81,13 +81,39 @@ namespace EAGLEye
                 bytesRead += nAlign;
                 partSize -= nAlign;
 
-                printf("    > Part #%d: 0x%08x / 0x%06x\n", i + 1, partId, BIN_ID(partId));
+                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId), g_chunks[nChunkIndex].m_pszType);
 
                 switch (BIN_ID(partId))
                 {
+                    case ID_BIN_ARCHIVE:
+                    {
+                        GeometryFileInfo_s geometryFileInfo{};
+                        partBytesRead += readGeneric(ifstream, geometryFileInfo);
+
+                        std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
+
+                        break;
+                    }
+
+                    case ID_HASH_TABLE:
+                    {
+                        size_t numEntries = partSize / 8;
+                        std::cout << "Hashtable: " << numEntries << " entry(s)" << std::endl;
+
+                        for (size_t j = 0; j < numEntries; j++)
+                        {
+                            int32_t hash;
+                            partBytesRead += readGeneric(ifstream, hash);
+                            ifstream.ignore(4);
+                            partBytesRead += 4;
+                        }
+
+                        break;
+                    }
+
                     case ID_OBJECT_HEADER:
                     {
-                        std::cout << "        Header" << std::endl;
+//                        std::cout << "        Header" << std::endl;
 
                         ifstream.ignore(16);
                         partBytesRead += 16; // 3 zeroes and an unknown
@@ -140,9 +166,10 @@ namespace EAGLEye
                         char name[nameLen];
                         ifstream.read(name, nameLen - 1);
                         partBytesRead += nameLen - 1;
-                        std::cout << name << std::endl;
-
-                        dumpBytes(ifstream, boost::algorithm::clamp(partSize - partBytesRead, 0, 256));
+                        std::cout << "Geometry Item" << std::endl;
+                        std::cout << "    Name: " << name << std::endl;
+                        std::cout << "    Minimum point: " << ptMin.x << "/" << ptMin.y << "/" << ptMin.z << "/" << ptMin.w << std::endl;
+                        std::cout << "    Maximum point: " << ptMax.x << "/" << ptMax.y << "/" << ptMax.z << "/" << ptMax.w << std::endl;
                         break;
                     }
                     case ID_TEXTURE_USAGE:
@@ -204,11 +231,17 @@ namespace EAGLEye
                             tVertex vertex{};
                             partBytesRead += readGeneric(ifstream, vertex);
 
-                            if (j % 5 == 0 && (vertex.x > std::numeric_limits<float>::max() ||
-                                               vertex.x < std::numeric_limits<float>::min()))
+                            std::numeric_limits<float> limits;
+
+                            if (vertex.x > limits.max() || vertex.x < limits.min())
                             {
-                                reinterpret_cast<int &>(vertex.x) |= 2;
+                                continue;
                             }
+
+//                            if (j % 5 == 0)
+//                            {
+//                                printf("entry %zu: %.4f\n", j, vertex.x);
+//                            }
 
 //                            printf("%.4f/%.4f/%.4f\n", vertex.x, vertex.y, vertex.z);
                         }
