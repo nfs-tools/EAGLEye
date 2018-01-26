@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/algorithm/clamp.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 namespace EAGLEye
 {
@@ -83,8 +84,8 @@ namespace EAGLEye
                 bytesRead += nAlign;
                 partSize -= nAlign;
 
-                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId),
-                       g_chunks[nChunkIndex].m_pszType);
+//                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId),
+//                       g_chunks[nChunkIndex].m_pszType);
 
                 switch (BIN_ID(partId))
                 {
@@ -95,7 +96,7 @@ namespace EAGLEye
 
                         catalog->filename = geometryFileInfo.path;
                         catalog->section = geometryFileInfo.section;
-                        std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
+//                        std::cout << geometryFileInfo.path << " [" << geometryFileInfo.section << "]" << std::endl;
 
                         break;
                     }
@@ -103,7 +104,7 @@ namespace EAGLEye
                     case ID_HASH_TABLE:
                     {
                         size_t numEntries = partSize / 8;
-                        std::cout << "Hashtable: " << numEntries << " entry(s)" << std::endl;
+//                        std::cout << "Hashtable: " << numEntries << " entry(s)" << std::endl;
 
                         for (size_t j = 0; j < numEntries; j++)
                         {
@@ -183,7 +184,7 @@ namespace EAGLEye
                                   << ptMax.w << std::endl;
 
                         GeometryItem geometryItem{};
-                        geometryItem.name = name;
+                        geometryItem.name = std::string(name);
                         geometryItem.maxPoint = ptMax;
                         geometryItem.minPoint = ptMin;
                         catalog->items.emplace_back(std::make_unique<GeometryItem>(geometryItem));
@@ -192,12 +193,12 @@ namespace EAGLEye
                     }
                     case ID_TEXTURE_USAGE:
                     {
-                        dumpBytes(ifstream, partSize);
+//                        dumpBytes(ifstream, partSize);
 //                        std::cout << "        Texture Usage" << std::endl;
 
                         long numTextures = partSize >> 3;
 
-                        std::cout << "        Textures: " << numTextures << std::endl;
+//                        std::cout << "        Textures: " << numTextures << std::endl;
 
                         catalog->items[catalog->items.size() - 1]->numTextures = numTextures;
 
@@ -213,11 +214,9 @@ namespace EAGLEye
                     }
                     case ID_MESH_HEADER:
                     {
-                        std::cout << "        Mesh Header" << std::endl;
+//                        std::cout << "        Mesh Header" << std::endl;
 //                        dumpBytes(ifstream, boost::algorithm::clamp(partSize, 0, 384));
                         partBytesRead += HandleGeometrySubchunkParts(ifstream, partId, partSize, catalog);
-
-                        catalog->items[catalog->items.size() - 1]->mesh = GeometryMesh{};
 
                         break;
                     }
@@ -246,69 +245,48 @@ namespace EAGLEye
                             geoFace.vB = face.vB;
                             geoFace.vC = face.vC;
 
-                            catalog->items[
-                                    catalog->items.size() - 1]->mesh.faces.emplace_back(geoFace);
-//                            printf("f %d %d %d\n", face.vA + 1, face.vB + 1, face.vC + 1);
+                            catalog->items[catalog->items.size() - 1]->mesh.faces.emplace_back(geoFace);
                         }
+
+                        std::cout << catalog->items[catalog->items.size() - 1]->mesh.faces.size() << std::endl;
 
                         break;
                     }
                     case ID_VERTICES:
                     {
-//                        std::cout << "        Vertices" << std::endl;
-                        Point3D min = catalog->items[catalog->items.size() - 1]->minPoint, max = catalog->items[
-                                catalog->items.size() - 1]->maxPoint;
-                        auto faces = catalog->items[
-                                catalog->items.size() - 1]->mesh.faces;
+                        Point3D min = catalog->items[catalog->items.size() - 1]->minPoint;
+                        Point3D max = catalog->items[catalog->items.size() - 1]->maxPoint;
+
+                        catalog->items[catalog->items.size() - 1]->mesh.vertices.resize(partSize / sizeof(tVertex));
 
                         for (size_t j = 0; j < partSize / sizeof(tVertex); j++)
                         {
                             tVertex vertex{};
                             partBytesRead += readGeneric(ifstream, vertex);
 
-                            if (((vertex.x < min.x || vertex.x > max.x) || (vertex.y < min.y || vertex.y > max.y) || (vertex.z < min.z || vertex.z > max.z)))
+                            Point3D vertexPoint{};
+                            vertexPoint.x = vertex.x;
+                            vertexPoint.y = vertex.y;
+                            vertexPoint.z = vertex.z;
+
+                            if (vertexPoint.coordsInRange(min, max))
                             {
-                                std::remove_if(faces.begin(), faces.end(), [&](GeometryFace& face)
-                                {
-                                    return face.vA == j || face.vB == j || face.vC == j;
-                                });
+                                GeometryVertex geoVertex{};
+                                geoVertex.x = vertexPoint.x;
+                                geoVertex.y = vertexPoint.y;
+                                geoVertex.z = vertexPoint.z;
+                                geoVertex.good = true;
 
-                                continue;
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j] = geoVertex;
+                            } else
+                            {
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j] = {};
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].good = true;
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].x = min.x;
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].y = min.y;
+                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].z = min.z;
                             }
-
-                            GeometryVertex geoVertex{};
-                            geoVertex.x = vertex.x;
-                            geoVertex.y = vertex.y;
-                            geoVertex.z = vertex.z;
-                            geoVertex.u = vertex.u;
-                            geoVertex.v = vertex.v;
-                            catalog->items[
-                                    catalog->items.size() - 1]->mesh.vertices.emplace_back(geoVertex);
-
-
-//                            if (vertex.x > std::numeric_limits<float>::max() ||
-//                                vertex.x < std::numeric_limits<float>::min() || std::isnan(vertex.x))
-//                            {
-//                                continue;
-//                            }
-
-//                            if (j % 5 == 0)
-//                            {
-//                                printf("entry %zu: %.4f\n", j, vertex.x);
-//                            }
-
-//                            printf("v %.4f %.4f %.4f\n", vertex.x, vertex.y, vertex.z);
                         }
-
-                        catalog->items[
-                                catalog->items.size() - 1]->mesh.faces = faces;
-
-//                        std::cout << "        " << partSize << " / " << sizeof(tVertex) * (partSize / sizeof(tVertex)) << std::endl;
-//                        float data[partSize >> 2];
-//                        ifstream.read((char *) &data[0], sizeof(data));
-//                        partBytesRead += sizeof(data);
-//                        partBytesRead += readGeneric(ifstream, data);
-//                        dumpBytes(ifstream, partSize - partBytesRead);
 
                         break;
                     }
@@ -319,9 +297,6 @@ namespace EAGLEye
                         partBytesRead += partSize;
 
                         catalog->items[catalog->items.size() - 1]->mesh.materialNames.emplace_back(std::string(name));
-
-                        std::cout << "        Material: " << name << std::endl;
-//                        std::cout << "        Material Name" << std::endl;
                         break;
                     }
                     default:
@@ -342,7 +317,6 @@ namespace EAGLEye
             auto runTo = ((long) ifstream.tellg()) + size;
 
             GeometryFileInfo_s geometryFileInfo{};
-            std::unique_ptr<GeometryCatalog> catalog{};
             std::vector<std::unique_ptr<GeometryCatalog>> catalogs{};
 
             for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
@@ -353,33 +327,35 @@ namespace EAGLEye
                 bytesRead += readGeneric(ifstream, scId);
                 bytesRead += readGeneric(ifstream, scSize);
 
-                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
+//                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
 
                 switch (scId)
                 {
                     case 0x80134001:
                     {
-                        catalog = std::make_unique<GeometryCatalog>(GeometryCatalog{});
+                        catalogs.push_back(std::make_unique<GeometryCatalog>(GeometryCatalog{}));
+//                        catalog = std::make_unique<GeometryCatalog>(GeometryCatalog{});
                     }
                     case 0x80134010:
                     {
-                        assert(catalog != nullptr);
-                        scBytesRead += HandleGeometrySubchunkParts(ifstream, scId, scSize, catalog);
+                        assert(!catalogs.empty() && catalogs[catalogs.size() - 1] != nullptr);
+                        scBytesRead += HandleGeometrySubchunkParts(ifstream, scId, scSize,
+                                                                   catalogs[catalogs.size() - 1]);
                         break;
                     }
                     default:
-                    {
-                        if (catalog != nullptr)
-                            catalogs.emplace_back(std::move(catalog));
-                        catalog = nullptr;
                         break;
-                    }
                 }
 
                 bytesRead += scBytesRead;
                 ifstream.ignore(scSize - scBytesRead);
                 bytesRead += scSize - scBytesRead;
             }
+
+//            std::cout << "Catalogs: " << catalogs.size() << std::endl;
+
+            for (auto &catalog : catalogs)
+                GlobalData::catalogs.emplace_back(std::move(catalog));
 
             ifstream.ignore(size - bytesRead);
 
@@ -482,13 +458,13 @@ namespace EAGLEye
 
                 auto chunkMapEntry = EAGLEye::chunkIdMap.find(id);
 
-                if (chunkMapEntry == EAGLEye::chunkIdMap.end())
-                {
-                    printf("0x%08x - no info\n", id);
-                } else
-                {
-                    printf("0x%08x - %s\n", id, chunkMapEntry->second.c_str());
-                }
+//                if (chunkMapEntry == EAGLEye::chunkIdMap.end())
+//                {
+//                    printf("0x%08x - no info\n", id);
+//                } else
+//                {
+//                    printf("0x%08x - %s\n", id, chunkMapEntry->second.c_str());
+//                }
 
 //                printf("0x%08x - %s\n", id, EAGLEye::chunkIdMap.find(id)->second.c_str());
 
@@ -504,6 +480,77 @@ namespace EAGLEye
                     {
                         ifstream.ignore(size);
                         break;
+                    }
+                }
+            }
+
+
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+
+            std::cout << "Info - catalogs: " << GlobalData::catalogs.size() << std::endl;
+
+            for (auto &catalog : GlobalData::catalogs)
+            {
+                std::cout << "Catalog" << std::endl;
+                std::cout << "    Name:    " << catalog->filename << std::endl;
+                std::cout << "    Section: " << catalog->section << std::endl;
+                std::cout << "    Items: " << catalog->numItems << std::endl;
+
+                boost::filesystem::path catalogPath = catalog->filename;
+                catalogPath = catalogPath.stem();
+                catalogPath = "data/modelsOut/" + catalogPath.string();
+
+                catalogPath = boost::filesystem::absolute(catalogPath);
+
+                if (!boost::filesystem::is_directory(catalogPath))
+                    boost::filesystem::create_directories(catalogPath);
+
+                for (auto &item : catalog->items)
+                {
+                    std::cout << " Item" << std::endl;
+                    std::cout << "     Name:          " << item->name << std::endl;
+                    std::cout << "     Textures:      " << item->numTextures << std::endl;
+                    std::cout << "     Minimum Point: " << item->minPoint.x << "/" << item->minPoint.y << "/"
+                              << item->minPoint.z << std::endl;
+                    std::cout << "     Maximum Point: " << item->maxPoint.x << "/" << item->maxPoint.y << "/"
+                              << item->maxPoint.z << std::endl;
+                    std::cout << "     Vertices:      " << item->mesh.vertices.size() << std::endl;
+                    std::cout << "     Faces:         " << item->mesh.faces.size() << std::endl;
+                    std::cout << "     Materials:     " << boost::algorithm::join(item->mesh.materialNames, ", ")
+                              << std::endl;
+
+                    {
+                        boost::filesystem::path itemPath = catalogPath / (item->name + std::string(".obj"));
+                        std::cout << itemPath.string() << std::endl;
+
+                        std::ofstream itemFile(itemPath.string(), std::ios::trunc);
+
+                        itemFile << "# Generated by EAGLEye" << std::endl;
+                        itemFile << std::fixed;
+                        itemFile << "g " << item->name << std::endl;
+
+                        std::vector<GeometryVertex> writtenVertices{};
+
+                        for (auto &vertex : item->mesh.vertices)
+                        {
+                            if (!vertex.good) continue;
+                            itemFile << "v " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
+                            writtenVertices.emplace_back(vertex);
+                        }
+
+                        itemFile << std::endl;
+
+                        for (auto &face : item->mesh.faces)
+                        {
+                            if (face.vA >= writtenVertices.size() || face.vB >= writtenVertices.size() || face.vC >= writtenVertices.size())
+                                continue;
+
+                            itemFile << "f " << face.vA + 1 << " " << face.vB + 1 << " " << face.vC + 1 << std::endl;
+                        }
                     }
                 }
             }

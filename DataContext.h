@@ -11,6 +11,7 @@ namespace EAGLEye
     {
         float x, y, z;
         float u, v;
+        bool good;
     };
 
     struct GeometryFace
@@ -49,7 +50,7 @@ namespace EAGLEye
     class GlobalData
     {
     public:
-        static std::vector<std::unique_ptr<GeometryCatalog>> catalogs{};
+        static std::vector<std::unique_ptr<GeometryCatalog>> catalogs;
     };
 }
 

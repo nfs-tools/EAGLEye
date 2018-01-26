@@ -24,6 +24,17 @@ namespace EAGLEye
     struct PACK Point3D
     {
         float x, y, z, w;
+
+        bool coordsInRange(Point3D min, Point3D max)
+        {
+            if (x < min.x || x > max.x)
+                return false;
+            if (y < min.y || y > max.y)
+                return false;
+            if (z < min.z || z > max.z)
+                return false;
+            return true;
+        }
     };
 
     union PACK Matrix
