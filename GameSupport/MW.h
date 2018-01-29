@@ -11,22 +11,32 @@ namespace EAGLEye
 {
     namespace MW
     {
-//#pragma pack(push, 2)
-        struct PACK tVertex
+#pragma pack(push, 2)
+
+        struct tVertex
         {
-            float x, y, z; // 0+(4*3)=12
-            float nx, ny, nz; // 12+(4*3)=24
-            unsigned int color; // 24+4=28
-            float u, v; // 28+(4*2)=36
+            float x, y, z;
+            float nx, ny, nz;
+            DWORD color;
+            float u, v;
+
+            Point3D toPoint()
+            {
+                Point3D point{};
+                point.x = x;
+                point.y = y;
+                point.z = z;
+                return point;
+            }
         };
 
-        struct PACK tFace
+        struct tFace
         {
             uint16_t vA;
             uint16_t vB;
             uint16_t vC;
         };
-//#pragma pack(pop)
+#pragma pack(pop)
 
         enum eBinChunkID
         {
@@ -53,20 +63,13 @@ namespace EAGLEye
             ID_UC_TRIANGLES = 0x134903,
             ID_TRIANGLES = 0x134B03,
             ID_MATERIAL_NAME = 0x134C02,
-            ID_UNKNOWN6 = 0x134017,//?
+            ID_UNKNOWN6 = 0x134017,// zero pad?
             ID_UNKNOWN7 = 0x134018,//?
             ID_UNKNOWN8 = 0x134019,//?
 
-            ID_TEX_FILE = 0x300000,
-            ID_TEX_UNK1 = 0x310000,
-            ID_TEX_UNK2 = 0x310001,
-            ID_TEX_IDLIST = 0x310002,
-            ID_TEX_LAYOUT = 0x310003,
-            ID_TEX_HEADERSLIST = 0x310004,
-            ID_TEX_TYPESLIST = 0x310005,
-            ID_TEX_UNK4 = 0x320000,//data container?
-            ID_TEX_UNK5 = 0x320001,//data container header?
-            ID_TEX_BINARYDATA = 0x320002,
+            ID_TPK_FILE = 0x310001,
+            ID_TPK_TEXTURE_HASHES = 0x310002,
+            ID_TPK_TEXTURE_NAMES = 0x310004,
 
             ID_FORCE_DWORD = 0x80FFFFFF
         };
@@ -122,6 +125,8 @@ namespace EAGLEye
         ParseTrackPathChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
 
         std::shared_ptr<EAGLEye::GeometryChunk> ParseGeometryChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        void ParseTexturePackChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
 
         std::shared_ptr<EAGLEye::EAGLAnimationsChunk>
         ParseAnimationsChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);

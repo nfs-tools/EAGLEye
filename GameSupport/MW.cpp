@@ -49,6 +49,109 @@ namespace EAGLEye
             return std::make_shared<EAGLEye::TrackPathChunk>(EAGLEye::TrackPathChunk{id, size});
         }
 
+        size_t HandleTPKSubchunkParts(std::ifstream &ifstream, uint32_t id, uint32_t size)
+        {
+            size_t bytesRead = 0;
+            auto runTo = ((long) ifstream.tellg()) + size;
+
+            std::vector<int32_t> textureHashes{};
+
+            for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
+            {
+                uint32_t partId, partSize;
+                size_t partBytesRead = 0;
+                bytesRead += readGeneric(ifstream, partId);
+                bytesRead += readGeneric(ifstream, partSize);
+
+                long nAlign = 0;
+                long nChunkIndex;
+                for (nChunkIndex = 0; g_chunks[nChunkIndex].m_pszType != nullptr; nChunkIndex++)
+                    if (BIN_ID(partId) == BIN_ID(g_chunks[nChunkIndex].id))
+                        break;
+
+                if (g_chunks[nChunkIndex].padding != 0)
+                {
+                    DWORD dw = 0x11111111;
+                    while (0x11111111 == dw)
+                    {
+                        nAlign += 4;
+                        readGeneric(ifstream, dw);
+                    }
+
+                    ifstream.seekg(-4, ifstream.cur);
+                    nAlign -= 4;
+                }
+
+                bytesRead += nAlign;
+                partSize -= nAlign;
+
+                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId),
+                       g_chunks[nChunkIndex].m_pszType);
+
+                switch (BIN_ID(partId))
+                {
+                    case ID_TPK_FILE:
+                    {
+                        uint32_t nMarker;
+                        partBytesRead += readGeneric(ifstream, nMarker);
+
+                        assert(HIWORD(nMarker) == 0x0000);
+
+                        char name[0x1C];
+                        partBytesRead += readGenericArray(ifstream, name, ARRAY_SIZE(name));
+
+                        char path[0x40];
+                        partBytesRead += readGenericArray(ifstream, path, ARRAY_SIZE(path));
+
+                        printf("%s: %s\n", name, path);
+
+                        for (int j = 0; j < 7; j++)
+                        {
+                            DWORD hash;
+                            partBytesRead += readGeneric(ifstream, hash);
+                        }
+
+                        break;
+                    }
+                    case ID_TPK_TEXTURE_HASHES:
+                    {
+                        size_t numHashEntries = partSize / 8;
+
+                        for (size_t j = 0; j < numHashEntries; j++)
+                        {
+                            int32_t hash;
+                            partBytesRead += readGeneric(ifstream, hash);
+
+                            uint32_t pad;
+                            partBytesRead += readGeneric(ifstream, pad);
+
+                            assert(pad == 0x00000000);
+                            textureHashes.emplace_back(hash);
+                        }
+
+                        break;
+                    }
+                    case ID_TPK_TEXTURE_NAMES:
+                    {
+                        ifstream.ignore(0xC);
+                        partBytesRead += 0xC;
+
+                        std::cout << "Number of Textures: " << textureHashes.size() << std::endl;
+
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                bytesRead += partBytesRead;
+                ifstream.ignore(partSize - partBytesRead);
+                bytesRead += partSize - partBytesRead;
+            }
+
+            return bytesRead;
+        }
+
         size_t HandleGeometrySubchunkParts(std::ifstream &ifstream, uint32_t id, uint32_t size,
                                            std::unique_ptr<GeometryCatalog> &catalog)
         {
@@ -84,8 +187,8 @@ namespace EAGLEye
                 bytesRead += nAlign;
                 partSize -= nAlign;
 
-//                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId),
-//                       g_chunks[nChunkIndex].m_pszType);
+                printf("    > Part #%d: 0x%08x / 0x%06x -> %s\n", i + 1, partId, BIN_ID(partId),
+                       g_chunks[nChunkIndex].m_pszType);
 
                 switch (BIN_ID(partId))
                 {
@@ -125,8 +228,14 @@ namespace EAGLEye
                     {
 //                        std::cout << "        Header" << std::endl;
 
-                        ifstream.ignore(16);
-                        partBytesRead += 16; // 3 zeroes and an unknown
+                        ifstream.ignore(12);
+                        partBytesRead += 12; // 3 zeroes
+
+                        uint32_t unk;
+                        partBytesRead += readGeneric(ifstream, unk);
+
+                        printf("unk1 = %d\n", unk);
+
                         ifstream.seekg(4, ifstream.cur);
                         partBytesRead += 4;
 
@@ -142,8 +251,11 @@ namespace EAGLEye
                         partBytesRead += readGeneric(ifstream, ptMax);
                         partBytesRead += readGeneric(ifstream, matrix);
 
-                        ifstream.ignore(32);
-                        partBytesRead += 32;
+                        hexdump(stdout, &matrix.m[0]);
+
+                        BYTE unknownData[32];
+                        partBytesRead += readGenericArray(ifstream, unknownData, ARRAY_SIZE(unknownData));
+                        hexdump(stdout, unknownData, ARRAY_SIZE(unknownData));
                         long headerSize = 160;
 
                         DWORD dwUnk4[6];
@@ -184,6 +296,7 @@ namespace EAGLEye
                                   << ptMax.w << std::endl;
 
                         GeometryItem geometryItem{};
+                        geometryItem.identifier = matrix.m[0];
                         geometryItem.name = std::string(name);
                         geometryItem.maxPoint = ptMax;
                         geometryItem.minPoint = ptMin;
@@ -230,12 +343,23 @@ namespace EAGLEye
 //                        std::cout << "        Material Assignment" << std::endl;
                         break;
                     }
+                    case ID_MATERIAL_NAME:
+                    {
+                        char name[partSize]; // literally, the name takes up the whole size
+                        ifstream.read(name, partSize);
+                        partBytesRead += partSize;
+
+                        catalog->items[catalog->items.size() - 1]->mesh.materialNames.emplace_back(std::string(name));
+                        break;
+                    }
+                    case ID_TEXTURE_APPLY:
+                    {
+                        dumpBytes(ifstream, partSize);
+                        break;
+                    }
                     case ID_TRIANGLES:
                     {
-//                        std::cout << "        Faces" << std::endl;
-//                        std::cout << "        " << partSize << " / " << sizeof(tFace) * (partSize / sizeof(tFace)) << std::endl;
-
-                        for (size_t j = 0; j < partSize / sizeof(tFace); j++)
+                        for (int j = 0; j < partSize / sizeof(tFace); j++)
                         {
                             tFace face{};
                             partBytesRead += readGeneric(ifstream, face);
@@ -248,55 +372,122 @@ namespace EAGLEye
                             catalog->items[catalog->items.size() - 1]->mesh.faces.emplace_back(geoFace);
                         }
 
-                        std::cout << catalog->items[catalog->items.size() - 1]->mesh.faces.size() << std::endl;
-
                         break;
                     }
                     case ID_VERTICES:
                     {
-                        Point3D min = catalog->items[catalog->items.size() - 1]->minPoint;
-                        Point3D max = catalog->items[catalog->items.size() - 1]->maxPoint;
+                        Point3D min = catalog->items[catalog->items.size() - 1]->minPoint, max = catalog->items[
+                                catalog->items.size() - 1]->maxPoint;
 
-                        catalog->items[catalog->items.size() - 1]->mesh.vertices.resize(partSize / sizeof(tVertex));
-
-                        for (size_t j = 0; j < partSize / sizeof(tVertex); j++)
+                        std::numeric_limits<float> limits;
+                        std::cout << partSize / sizeof(tVertex) << std::endl;
+                        for (int j = 0; j < partSize / sizeof(tVertex); j++)
                         {
                             tVertex vertex{};
                             partBytesRead += readGeneric(ifstream, vertex);
 
-                            Point3D vertexPoint{};
-                            vertexPoint.x = vertex.x;
-                            vertexPoint.y = vertex.y;
-                            vertexPoint.z = vertex.z;
+//                            printf("%.4f/%.4f/%.4f [%s]\n", vertex.x, vertex.y, vertex.z,
+//                                   vertex.toPoint().coordsInRange(min, max) ? "Good" : "Bad");
 
-                            if (vertexPoint.coordsInRange(min, max))
-                            {
-                                GeometryVertex geoVertex{};
-                                geoVertex.x = vertexPoint.x;
-                                geoVertex.y = vertexPoint.y;
-                                geoVertex.z = vertexPoint.z;
-                                geoVertex.good = true;
+                            float x = vertex.x;
+                            float y = vertex.y;
+                            float z = vertex.z;
 
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j] = geoVertex;
-                            } else
+                            if (std::isnan(x))
                             {
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j] = {};
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].good = true;
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].x = min.x;
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].y = min.y;
-                                catalog->items[catalog->items.size() - 1]->mesh.vertices[j].z = min.z;
+                                assert(j != 0);
+                                vertex.x = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].x;
                             }
+
+                            if (std::isnan(y))
+                            {
+                                assert(j != 0);
+                                vertex.y = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].y;
+                            }
+
+                            if (std::isnan(z))
+                            {
+                                assert(j != 0);
+                                vertex.z = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].z;
+                            }
+
+                            if (x < min.x || x > max.x)
+                            {
+                                printf("x violator: %.4f\n", vertex.x);
+                                hexdump(stdout, &x);
+
+                                if (x >= limits.min() && x <= limits.max())
+                                {
+                                    continue;
+                                }
+
+                                auto const *const p = (unsigned char const *) &x;
+
+//                                printf("%02x %02x %02x %02x\n", p[0], p[1], p[2], p[3]);
+
+                                if (p[3] != 0xFF)
+                                {
+                                    printf("wat\n");
+                                    continue;
+                                }
+
+                                printf("prosecuting bad boi\n");
+                                assert(j != 0);
+                                vertex.x = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].x;
+
+
+                                printf("\n");
+                            }
+
+                            if (y < min.y || y > max.y)
+                            {
+                                printf("y violator: %.4f\n", vertex.y);
+                                hexdump(stdout, &y);
+
+                                if (y >= limits.min() && y <= limits.max())
+                                {
+                                    continue;
+                                }
+
+                                printf("prosecuting bad boi\n");
+                                assert(j != 0);
+                                vertex.y = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].y;
+
+                                printf("\n");
+                            }
+
+                            if (z < min.z || z > max.z)
+                            {
+                                printf("z violator: %.4f\n", vertex.z);
+                                hexdump(stdout, &z);
+
+                                if (z >= limits.min() && z <= limits.max())
+                                {
+                                    continue;
+                                }
+
+                                printf("prosecuting bad boi\n");
+                                assert(j != 0);
+                                vertex.z = catalog->items[
+                                        catalog->items.size() - 1]->mesh.vertices[j - 1].z;
+
+                                printf("\n");
+                            }
+
+                            GeometryVertex geometryVertex{};
+                            geometryVertex.x = vertex.x;
+                            geometryVertex.y = vertex.y;
+                            geometryVertex.z = vertex.z;
+
+                            catalog->items[
+                                    catalog->items.size() - 1]->mesh.vertices.emplace_back(geometryVertex);
                         }
 
-                        break;
-                    }
-                    case ID_MATERIAL_NAME:
-                    {
-                        char name[partSize]; // literally, the name takes up the whole size
-                        ifstream.read(name, partSize);
-                        partBytesRead += partSize;
-
-                        catalog->items[catalog->items.size() - 1]->mesh.materialNames.emplace_back(std::string(name));
                         break;
                     }
                     default:
@@ -327,14 +518,13 @@ namespace EAGLEye
                 bytesRead += readGeneric(ifstream, scId);
                 bytesRead += readGeneric(ifstream, scSize);
 
-//                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
+                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
 
                 switch (scId)
                 {
                     case 0x80134001:
                     {
                         catalogs.push_back(std::make_unique<GeometryCatalog>(GeometryCatalog{}));
-//                        catalog = std::make_unique<GeometryCatalog>(GeometryCatalog{});
                     }
                     case 0x80134010:
                     {
@@ -362,51 +552,56 @@ namespace EAGLEye
             return std::make_shared<EAGLEye::GeometryChunk>(EAGLEye::GeometryChunk{id, size});
         }
 
-        std::shared_ptr<EAGLEye::EAGLAnimationsChunk>
-        ParseAnimationsChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
+        void ParseTexturePackChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
         {
-            EAGLEye::EAGLAnimationsChunk chunk{id, size};
             size_t bytesRead = 0;
-            AnimationsStruct_s animationsStruct_s{};
+            auto runTo = ((long) ifstream.tellg()) + size;
 
-            bytesRead += readGeneric(ifstream, animationsStruct_s);
+            GeometryFileInfo_s geometryFileInfo{};
+            std::vector<std::unique_ptr<GeometryCatalog>> catalogs{};
 
-            dumpBytes(ifstream, 256);
-            ifstream.ignore(size - bytesRead);
-
-            return std::make_shared<EAGLEye::EAGLAnimationsChunk>(chunk);
-        }
-
-        std::shared_ptr<EAGLEye::TrackStreamerSectionsChunk>
-        ParseTrackStreamerSectionsChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
-        {
-            EAGLEye::TrackStreamerSectionsChunk chunk{id, size};
-
-            for (int i = 0; i < size / sizeof(EAGLEye::TrackStreamerSection_s); i++)
+            for (int i = 0; i < 0xFFFF && ifstream.tellg() < runTo; i++)
             {
-                EAGLEye::TrackStreamerSection_s section{};
-                readGeneric(ifstream, section);
-                chunk.sections.emplace_back(section);
+                size_t scBytesRead = 0;
+                uint32_t scId, scSize;
+
+                bytesRead += readGeneric(ifstream, scId);
+                bytesRead += readGeneric(ifstream, scSize);
+
+                auto chunkMapEntry = EAGLEye::chunkIdMap.find(scId);
+
+                if (chunkMapEntry == EAGLEye::chunkIdMap.end())
+                {
+                    printf("Sub-chunk #%d: 0x%08x - no info\n", i + 1, scId);
+                } else
+                {
+                    printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, chunkMapEntry->second.c_str());
+                }
+
+                switch (scId)
+                {
+                    case 0xb3310000:
+                    {
+                        scBytesRead += HandleTPKSubchunkParts(ifstream, scId, scSize);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+//                printf("Sub-chunk #%d: 0x%08x - %s\n", i + 1, scId, EAGLEye::chunkIdMap.find(scId)->second.c_str());
+
+                bytesRead += scBytesRead;
+                ifstream.ignore(scSize - scBytesRead);
+                bytesRead += scSize - scBytesRead;
             }
 
-            return std::make_shared<EAGLEye::TrackStreamerSectionsChunk>(chunk);
-        }
+//            std::cout << "Catalogs: " << catalogs.size() << std::endl;
 
-        std::shared_ptr<EAGLEye::VisibleSectionChunk>
-        ParseVisibleSectionChunk(std::ifstream &ifstream, uint32_t id, uint32_t size)
-        {
-            VisibleSectionStruct_s visibleSectionStruct{};
-            readGeneric(ifstream, visibleSectionStruct);
+            for (auto &catalog : catalogs)
+                GlobalData::catalogs.emplace_back(std::move(catalog));
 
-            ifstream.ignore(size - sizeof(visibleSectionStruct));
-
-            EAGLEye::VisibleSectionChunk chunk{id, size};
-
-            chunk.visibleSection = visibleSectionStruct;
-
-            std::cout << "Visible Section: " << visibleSectionStruct.name << std::endl;
-
-            return std::make_shared<EAGLEye::VisibleSectionChunk>(chunk);
+            ifstream.ignore(size - bytesRead);
         }
 
         void HandleFile(boost::filesystem::path &path, std::ifstream &ifstream, EAGLEye::FileType fileType)
@@ -458,13 +653,13 @@ namespace EAGLEye
 
                 auto chunkMapEntry = EAGLEye::chunkIdMap.find(id);
 
-//                if (chunkMapEntry == EAGLEye::chunkIdMap.end())
-//                {
-//                    printf("0x%08x - no info\n", id);
-//                } else
-//                {
-//                    printf("0x%08x - %s\n", id, chunkMapEntry->second.c_str());
-//                }
+                if (chunkMapEntry == EAGLEye::chunkIdMap.end())
+                {
+                    printf("0x%08x - no info\n", id);
+                } else
+                {
+                    printf("0x%08x - %s\n", id, chunkMapEntry->second.c_str());
+                }
 
 //                printf("0x%08x - %s\n", id, EAGLEye::chunkIdMap.find(id)->second.c_str());
 
@@ -474,6 +669,11 @@ namespace EAGLEye
                     {
                         ParseGeometryChunk(ifstream, id, size);
 
+                        break;
+                    }
+                    case 0xb3300000: // BCHUNK_SPEED_TEXTURE_PACK_LIST_CHUNKS
+                    {
+                        ParseTexturePackChunk(ifstream, id, size);
                         break;
                     }
                     default:
@@ -525,28 +725,41 @@ namespace EAGLEye
 
                     {
                         boost::filesystem::path itemPath = catalogPath / (item->name + std::string(".obj"));
-                        std::cout << itemPath.string() << std::endl;
+//                        std::cout << itemPath.string() << std::endl;
 
                         std::ofstream itemFile(itemPath.string(), std::ios::trunc);
 
                         itemFile << "# Generated by EAGLEye" << std::endl;
+                        itemFile << "# Catalog: " << catalog->filename << " [" << catalog->section << "]" << std::endl;
                         itemFile << std::fixed;
-                        itemFile << "g " << item->name << std::endl;
 
-                        std::vector<GeometryVertex> writtenVertices{};
+                        itemFile << "# Materials [" << item->mesh.materialNames.size() << "]" << std::endl;
+
+                        for (auto &materialName : item->mesh.materialNames)
+                        {
+                            itemFile << "newmtl " << materialName << std::endl;
+                            itemFile << "Ka 1.000 1.000 1.000" << std::endl;
+                            itemFile << "Kd 1.000 1.000 1.000" << std::endl;
+                            itemFile << "Ks 0.000 0.000 0.000" << std::endl;
+                            itemFile << std::endl;
+                        }
+
+                        for (auto &materialName : item->mesh.materialNames)
+                        {
+                            itemFile << "usemtl " << materialName << std::endl;
+                        }
+
+                        itemFile << "g " << item->name << std::endl;
 
                         for (auto &vertex : item->mesh.vertices)
                         {
-                            if (!vertex.good) continue;
                             itemFile << "v " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
-                            writtenVertices.emplace_back(vertex);
                         }
-
-                        itemFile << std::endl;
 
                         for (auto &face : item->mesh.faces)
                         {
-                            if (face.vA >= writtenVertices.size() || face.vB >= writtenVertices.size() || face.vC >= writtenVertices.size())
+                            if (face.vA >= item->mesh.vertices.size() || face.vB >= item->mesh.vertices.size() ||
+                                face.vC >= item->mesh.vertices.size())
                                 continue;
 
                             itemFile << "f " << face.vA + 1 << " " << face.vB + 1 << " " << face.vC + 1 << std::endl;

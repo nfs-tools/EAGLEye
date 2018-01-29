@@ -19,6 +19,10 @@ typedef unsigned char BYTE;
 #define PACK __attribute__((__packed__))
 #define BIN_ID(n) ((DWORD) (n) & 0xFFFFFF) // strips the high byte i guess
 
+#define LOWORD(a) ((WORD)(a))
+#define HIWORD(a) ((WORD)(((DWORD)(a) >> 16) & 0xFFFF))
+#define ARRAY_SIZE(a) sizeof(a) / sizeof(a[0])
+
 namespace EAGLEye
 {
     struct PACK Point3D
@@ -31,9 +35,7 @@ namespace EAGLEye
                 return false;
             if (y < min.y || y > max.y)
                 return false;
-            if (z < min.z || z > max.z)
-                return false;
-            return true;
+            return !(z < min.z || z > max.z);
         }
     };
 
@@ -198,7 +200,7 @@ namespace EAGLEye
         static std::vector<BYTE> GetBytes(long value);
     };
 
-    template <typename V>
+    template<typename V>
     std::vector<std::string> extract_keys(std::map<std::string, V> const &input_map)
     {
         std::vector<std::string> retval;
@@ -223,8 +225,8 @@ namespace EAGLEye
         return alignTo - (num % alignTo);
     }
 
-    template <typename d=void>
-    long AlignFS(std::ifstream &ifstream, long bytes)
+    template<typename d=void>
+    long AlignFS(std::ifstream &ifstream, int bytes)
     {
         long b2skip = PaddingAlign(ifstream.tellg(), bytes);
         ifstream.ignore(b2skip);
@@ -303,6 +305,14 @@ namespace EAGLEye
     size_t readGeneric(std::ifstream &stream, Data &data, size_t size = sizeof(Data))
     {
         stream.read((char *) &data, size);
+
+        return size;
+    }
+
+    template<typename Data>
+    size_t readGenericArray(std::ifstream &stream, Data data[], size_t size)
+    {
+        stream.read((char *) &data[0], size);
 
         return size;
     }

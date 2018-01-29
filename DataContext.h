@@ -34,6 +34,7 @@ namespace EAGLEye
         Point3D minPoint, maxPoint;
         long numTextures;
         GeometryMesh mesh;
+        float identifier;
     };
 
     struct GeometryCatalog
@@ -45,6 +46,7 @@ namespace EAGLEye
         std::vector<int32_t> hashTable;
         size_t numItems; // == hashTable.size()
         std::vector<std::unique_ptr<GeometryItem>> items;
+        long alignBase;
     };
 
     class GlobalData
