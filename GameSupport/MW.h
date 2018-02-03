@@ -11,9 +11,7 @@ namespace EAGLEye
 {
     namespace MW
     {
-#pragma pack(push, 2)
-
-        struct tVertex
+        struct PACK tCarVertex
         {
             float x, y, z;
             float nx, ny, nz;
@@ -30,13 +28,29 @@ namespace EAGLEye
             }
         };
 
-        struct tFace
+        struct PACK tWorldVertex
+        {
+            float x, y, z;
+            float nx, ny, nz;
+            DWORD color;
+            float u, v;
+
+            Point3D toPoint()
+            {
+                Point3D point{};
+                point.x = x;
+                point.y = y;
+                point.z = z;
+                return point;
+            }
+        };
+
+        struct PACK tFace
         {
             uint16_t vA;
             uint16_t vB;
             uint16_t vC;
         };
-#pragma pack(pop)
 
         enum eBinChunkID
         {
@@ -72,6 +86,14 @@ namespace EAGLEye
             ID_TPK_TEXTURE_NAMES = 0x310004,
 
             ID_FORCE_DWORD = 0x80FFFFFF
+        };
+
+        struct PACK LanguageFileHeader_s
+        {
+            unsigned int id; // should always be 0x00000010 (10 00 00 00)
+            unsigned short numberOfStrings; // same across each individual language, of course
+            unsigned int unknown1; // usually 0x00001814 in MW05 (14 18 00 00)
+            unsigned int unknown2;
         };
 
         struct MWBINChunk
@@ -136,6 +158,8 @@ namespace EAGLEye
 
         std::shared_ptr<EAGLEye::VisibleSectionChunk>
         ParseVisibleSectionChunk(std::ifstream &ifstream, uint32_t id, uint32_t size);
+
+        void GenerateStreamFile();
 
         void HandleFile(boost::filesystem::path &path, std::ifstream &ifstream, EAGLEye::FileType fileType);
 

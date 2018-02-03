@@ -98,10 +98,10 @@ namespace EAGLEye
                         assert(HIWORD(nMarker) == 0x0000);
 
                         char name[0x1C];
-                        partBytesRead += readGenericArray(ifstream, name, ARRAY_SIZE(name));
+                        partBytesRead += readGenericArray(ifstream, name, ARRAY_LENGTH(name));
 
                         char path[0x40];
-                        partBytesRead += readGenericArray(ifstream, path, ARRAY_SIZE(path));
+                        partBytesRead += readGenericArray(ifstream, path, ARRAY_LENGTH(path));
 
                         printf("%s: %s\n", name, path);
 
@@ -236,8 +236,11 @@ namespace EAGLEye
 
                         printf("unk1 = %d\n", unk);
 
-                        ifstream.seekg(4, ifstream.cur);
-                        partBytesRead += 4;
+                        uint32_t unk2;
+                        partBytesRead += readGeneric(ifstream, unk2);
+
+//                        ifstream.seekg(4, ifstream.cur);
+//                        partBytesRead += 4;
 
                         long numTris;
                         partBytesRead += readGeneric(ifstream, numTris);
@@ -251,11 +254,10 @@ namespace EAGLEye
                         partBytesRead += readGeneric(ifstream, ptMax);
                         partBytesRead += readGeneric(ifstream, matrix);
 
-                        hexdump(stdout, &matrix.m[0]);
+//                        hexdump(stdout, &matrix);
 
                         BYTE unknownData[32];
-                        partBytesRead += readGenericArray(ifstream, unknownData, ARRAY_SIZE(unknownData));
-                        hexdump(stdout, unknownData, ARRAY_SIZE(unknownData));
+                        partBytesRead += readGenericArray(ifstream, unknownData, ARRAY_LENGTH(unknownData));
                         long headerSize = 160;
 
                         DWORD dwUnk4[6];
@@ -271,15 +273,18 @@ namespace EAGLEye
 
                             if (dwUnk4[0] == 0)
                             {
+                                printf("type 1a\n");
                                 ifstream.read((char *) &dwUnk4[1], 12);
                                 headerSize += 0x10;
                             } else
                             {
+                                printf("type 1b\n");
                                 ifstream.seekg(-4, ifstream.cur);
                                 partBytesRead -= 4;
                             }
                         } else
                         {
+                            printf("type 2\n");
                             ifstream.seekg(-4, ifstream.cur);
                             partBytesRead -= 4;
                         }
@@ -354,7 +359,7 @@ namespace EAGLEye
                     }
                     case ID_TEXTURE_APPLY:
                     {
-                        dumpBytes(ifstream, partSize);
+//                        dumpBytes(ifstream, partSize);
                         break;
                     }
                     case ID_TRIANGLES:
@@ -379,113 +384,51 @@ namespace EAGLEye
                         Point3D min = catalog->items[catalog->items.size() - 1]->minPoint, max = catalog->items[
                                 catalog->items.size() - 1]->maxPoint;
 
-                        std::numeric_limits<float> limits;
-                        std::cout << partSize / sizeof(tVertex) << std::endl;
-                        for (int j = 0; j < partSize / sizeof(tVertex); j++)
+                        if (catalog->filename == "GEOMETRY.BIN" && catalog->section == "DEFAULT")
                         {
-                            tVertex vertex{};
-                            partBytesRead += readGeneric(ifstream, vertex);
+                            printf("Seems to be a car\n");
 
-//                            printf("%.4f/%.4f/%.4f [%s]\n", vertex.x, vertex.y, vertex.z,
-//                                   vertex.toPoint().coordsInRange(min, max) ? "Good" : "Bad");
+                            size_t numVertices = partSize / sizeof(tCarVertex);
 
-                            float x = vertex.x;
-                            float y = vertex.y;
-                            float z = vertex.z;
+                            printf("Number of vertices: %zu\n", numVertices);
 
-                            if (std::isnan(x))
+                            for (int j = 0; j < numVertices; j++)
                             {
-                                assert(j != 0);
-                                vertex.x = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].x;
+                                tCarVertex carVertex{};
+                                partBytesRead += readGeneric(ifstream, carVertex);
+
+                                assert(carVertex.x >= min.x && carVertex.x <= max.x);
+                                assert(carVertex.y >= min.y && carVertex.y <= max.y);
+                                assert(carVertex.z >= min.z && carVertex.z <= max.z);
+                                printf("%.4f/%.4f/%.4f\n", carVertex.x, carVertex.y, carVertex.z);
                             }
+                        } else
+                        {
+//                            size_t fixedSize = partSize;
+//
+//                            partBytesRead++;
+//
+//                            while (readByte(ifstream) == 0)
+//                            {
+//                                partBytesRead++;
+//                            }
+//
+//                            partBytesRead--;
+//                            ifstream.seekg(-1, ifstream.cur);
+//
+//                            fixedSize -= partBytesRead;
+//
+//                            assert(fixedSize <= partSize);
 
-                            if (std::isnan(y))
-                            {
-                                assert(j != 0);
-                                vertex.y = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].y;
-                            }
-
-                            if (std::isnan(z))
-                            {
-                                assert(j != 0);
-                                vertex.z = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].z;
-                            }
-
-                            if (x < min.x || x > max.x)
-                            {
-                                printf("x violator: %.4f\n", vertex.x);
-                                hexdump(stdout, &x);
-
-                                if (x >= limits.min() && x <= limits.max())
-                                {
-                                    continue;
-                                }
-
-                                auto const *const p = (unsigned char const *) &x;
-
-//                                printf("%02x %02x %02x %02x\n", p[0], p[1], p[2], p[3]);
-
-                                if (p[3] != 0xFF)
-                                {
-                                    printf("wat\n");
-                                    continue;
-                                }
-
-                                printf("prosecuting bad boi\n");
-                                assert(j != 0);
-                                vertex.x = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].x;
+//                            for (size_t j = 0; j < boost::algorithm::clamp(data.size(), 0, 75); j++)
+//                            {
+//                                printf("float #%zu: %.4f\n", j, data[j]);
+//                                hexdump(stdout, &data[j]);
+//                            }
 
 
-                                printf("\n");
-                            }
 
-                            if (y < min.y || y > max.y)
-                            {
-                                printf("y violator: %.4f\n", vertex.y);
-                                hexdump(stdout, &y);
-
-                                if (y >= limits.min() && y <= limits.max())
-                                {
-                                    continue;
-                                }
-
-                                printf("prosecuting bad boi\n");
-                                assert(j != 0);
-                                vertex.y = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].y;
-
-                                printf("\n");
-                            }
-
-                            if (z < min.z || z > max.z)
-                            {
-                                printf("z violator: %.4f\n", vertex.z);
-                                hexdump(stdout, &z);
-
-                                if (z >= limits.min() && z <= limits.max())
-                                {
-                                    continue;
-                                }
-
-                                printf("prosecuting bad boi\n");
-                                assert(j != 0);
-                                vertex.z = catalog->items[
-                                        catalog->items.size() - 1]->mesh.vertices[j - 1].z;
-
-                                printf("\n");
-                            }
-
-                            GeometryVertex geometryVertex{};
-                            geometryVertex.x = vertex.x;
-                            geometryVertex.y = vertex.y;
-                            geometryVertex.z = vertex.z;
-
-                            catalog->items[
-                                    catalog->items.size() - 1]->mesh.vertices.emplace_back(geometryVertex);
+//                            dumpBytes(ifstream, boost::algorithm::clamp(partSize, 0, 512));
                         }
 
                         break;
@@ -604,6 +547,38 @@ namespace EAGLEye
             ifstream.ignore(size - bytesRead);
         }
 
+        /**
+         * generate an empty STREAML2RA
+         */
+        void GenerateStreamFile()
+        {
+            {
+                std::ofstream stream("L2RA-inject.BUN", std::ios::binary);
+                TrackStreamerSection_s trackStreamerSection{};
+
+                trackStreamerSection.id[0] = 'X';
+                trackStreamerSection.id[1] = '0';
+                trackStreamerSection.Unk1 = 0;
+                trackStreamerSection.StreamChunkNumber = 2400;
+                trackStreamerSection.Unk2 = 0;
+                trackStreamerSection.MasterStreamChunkNumber = 1;
+                trackStreamerSection.MasterStreamChunkOffset = 0;
+                trackStreamerSection.Size1 = 0;
+                trackStreamerSection.Size2 = 0;
+                trackStreamerSection.Size3 = 0;
+                trackStreamerSection.X = 0;
+                trackStreamerSection.Y = 0;
+                trackStreamerSection.Z = 0;
+                trackStreamerSection.StreamChunkHash = 0;
+
+                memset(trackStreamerSection.data, '\0', sizeof(trackStreamerSection.data));
+
+                writeGeneric(stream, 0x00034110);
+                writeGeneric(stream, sizeof(trackStreamerSection));
+                writeGeneric(stream, trackStreamerSection);
+            }
+        }
+
         void HandleFile(boost::filesystem::path &path, std::ifstream &ifstream, EAGLEye::FileType fileType)
         {
             switch (fileType)
@@ -695,10 +670,10 @@ namespace EAGLEye
 
             for (auto &catalog : GlobalData::catalogs)
             {
-                std::cout << "Catalog" << std::endl;
-                std::cout << "    Name:    " << catalog->filename << std::endl;
-                std::cout << "    Section: " << catalog->section << std::endl;
-                std::cout << "    Items: " << catalog->numItems << std::endl;
+//                std::cout << "Catalog" << std::endl;
+//                std::cout << "    Name:    " << catalog->filename << std::endl;
+//                std::cout << "    Section: " << catalog->section << std::endl;
+//                std::cout << "    Items: " << catalog->numItems << std::endl;
 
                 boost::filesystem::path catalogPath = catalog->filename;
                 catalogPath = catalogPath.stem();
@@ -711,21 +686,20 @@ namespace EAGLEye
 
                 for (auto &item : catalog->items)
                 {
-                    std::cout << " Item" << std::endl;
-                    std::cout << "     Name:          " << item->name << std::endl;
-                    std::cout << "     Textures:      " << item->numTextures << std::endl;
-                    std::cout << "     Minimum Point: " << item->minPoint.x << "/" << item->minPoint.y << "/"
-                              << item->minPoint.z << std::endl;
-                    std::cout << "     Maximum Point: " << item->maxPoint.x << "/" << item->maxPoint.y << "/"
-                              << item->maxPoint.z << std::endl;
-                    std::cout << "     Vertices:      " << item->mesh.vertices.size() << std::endl;
-                    std::cout << "     Faces:         " << item->mesh.faces.size() << std::endl;
-                    std::cout << "     Materials:     " << boost::algorithm::join(item->mesh.materialNames, ", ")
-                              << std::endl;
+//                    std::cout << " Item" << std::endl;
+//                    std::cout << "     Name:          " << item->name << std::endl;
+//                    std::cout << "     Textures:      " << item->numTextures << std::endl;
+//                    std::cout << "     Minimum Point: " << item->minPoint.x << "/" << item->minPoint.y << "/"
+//                              << item->minPoint.z << std::endl;
+//                    std::cout << "     Maximum Point: " << item->maxPoint.x << "/" << item->maxPoint.y << "/"
+//                              << item->maxPoint.z << std::endl;
+//                    std::cout << "     Vertices:      " << item->mesh.vertices.size() << std::endl;
+//                    std::cout << "     Faces:         " << item->mesh.faces.size() << std::endl;
+//                    std::cout << "     Materials:     " << boost::algorithm::join(item->mesh.materialNames, ", ")
+//                              << std::endl;
 
                     {
                         boost::filesystem::path itemPath = catalogPath / (item->name + std::string(".obj"));
-//                        std::cout << itemPath.string() << std::endl;
 
                         std::ofstream itemFile(itemPath.string(), std::ios::trunc);
 
@@ -734,6 +708,8 @@ namespace EAGLEye
                         itemFile << std::fixed;
 
                         itemFile << "# Materials [" << item->mesh.materialNames.size() << "]" << std::endl;
+
+                        std::vector<GeometryVertex> writtenVertices;
 
                         for (auto &materialName : item->mesh.materialNames)
                         {
@@ -753,13 +729,16 @@ namespace EAGLEye
 
                         for (auto &vertex : item->mesh.vertices)
                         {
+                            if (!vertex.good) continue;
+
                             itemFile << "v " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
+                            writtenVertices.emplace_back(vertex);
                         }
 
                         for (auto &face : item->mesh.faces)
                         {
-                            if (face.vA >= item->mesh.vertices.size() || face.vB >= item->mesh.vertices.size() ||
-                                face.vC >= item->mesh.vertices.size())
+                            if (face.vA >= writtenVertices.size() || face.vB >= writtenVertices.size() ||
+                                face.vC >= writtenVertices.size())
                                 continue;
 
                             itemFile << "f " << face.vA + 1 << " " << face.vB + 1 << " " << face.vC + 1 << std::endl;

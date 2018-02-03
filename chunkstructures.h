@@ -57,14 +57,6 @@ namespace EAGLEye
         BYTE data[40];
     };
 
-    struct PACK LanguageFileHeader_s
-    {
-        unsigned int id; // should always be 0x00000010 (10 00 00 00)
-        unsigned short numberOfStrings; // same across each individual language, of course
-        unsigned int unknown1; // usually 0x00001814 in MW05 (14 18 00 00)
-        unsigned int unknown2;
-    };
-
     struct PACK VisibleSectionStruct_s
     {
         BYTE pad[0x08];

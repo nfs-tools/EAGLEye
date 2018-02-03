@@ -8,6 +8,7 @@
 #include "eaglutils.h"
 #include "chunkbase.h"
 #include "GameSupport/MW.h"
+#include "GameSupport/Carbon.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -47,10 +48,14 @@ int main(int argc, char **argv)
         po::options_description desc("Allowed options");
         std::string inputFilename;
         std::string gameName;
+        std::string action;
+        std::string inputFileType;
         desc.add_options()
                 ("help,h", "Show description")
-                ("file,f", po::value<std::string>(&inputFilename), "Input file")
-                ("game,g", po::value<std::string>(&gameName), "Game ID");
+                ("file,f", po::value<std::string>(&inputFilename)->required(), "Input file")
+                ("action,a", po::value<std::string>(&action), "Action")
+                ("type,t", po::value<std::string>(&inputFileType), "File Type")
+                ("game,g", po::value<std::string>(&gameName)->required(), "Game ID");
 
         po::variables_map vm;
         po::store(po::parse_command_line(argc, const_cast<const char *const *>(argv), desc), vm);
@@ -94,7 +99,29 @@ int main(int argc, char **argv)
             switch (foundGame_->second)
             {
                 case 0x2:
-                    EAGLEye::MW::HandleFile(filePath, stream, fileType);
+                    if (action == "generate-stream")
+                    {
+                        EAGLEye::MW::GenerateStreamFile();
+                    } else
+                    {
+                        EAGLEye::MW::HandleFile(filePath, stream, fileType);
+                    }
+
+                    break;
+                case 0x5:
+                    if (action == "generate-stream")
+                    {
+
+                    } else
+                    {
+                        if (boost::algorithm::to_upper_copy(inputFileType) == "CAR")
+                        {
+                            EAGLEye::Carbon::HandleCarFile(filePath, stream);
+                        } else
+                        {
+                            EAGLEye::Carbon::HandleFile(filePath, stream, fileType);
+                        }
+                    }
                     break;
                 default:
                     break;
