@@ -9,6 +9,7 @@
 #include "chunkbase.h"
 #include "GameSupport/MW.h"
 #include "GameSupport/Carbon.h"
+#include "GameSupport/World.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -121,6 +122,15 @@ int main(int argc, char **argv)
                         {
                             EAGLEye::Carbon::HandleFile(filePath, stream, fileType);
                         }
+                    }
+                    break;
+                case 0x5a:
+                    if (action == "generate-stream")
+                    {
+
+                    } else
+                    {
+                        EAGLEye::World::HandleFile(filePath, stream, fileType);
                     }
                     break;
                 default:

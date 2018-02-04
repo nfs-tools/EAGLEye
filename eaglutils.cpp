@@ -18,6 +18,17 @@ namespace EAGLEye
         stream.seekg(curPos);
     }
 
+    void dumpBytesToFile(std::ifstream &stream, std::ofstream &output, size_t bytes)
+    {
+        auto curPos = stream.tellg();
+
+        unsigned char buf[bytes];
+
+        stream.read((char *) &buf[0], sizeof(buf));
+        hexdump(output, buf, sizeof(buf));
+        stream.seekg(curPos);
+    }
+
     short BitConverter::ToInt16(const BYTE *bytes, int offset)
     {
         auto result = (int16_t) ((int) bytes[offset] & 0xff);

@@ -8,6 +8,7 @@
 #include <map>
 
 #include <boost/program_options.hpp>
+#include <boost/format.hpp>
 
 typedef unsigned int DWORD;
 typedef unsigned short WORD;
@@ -175,8 +176,11 @@ namespace EAGLEye
 
         BCHUNK_CARBON_TPK_CONTAINER = 0xb3310000,
         BCHUNK_CARBON_TPK_INFO = 0x33310001,
+        BCHUNK_CARBON_TPK_TEXTURE_DATA = 0xb3320000,
         BCHUNK_CARBON_TPK_HASHES = 0x33310002,
         BCHUNK_CARBON_TPK_TEXTURE_NAMES = 0x33310004,
+        BCHUNK_CARBON_TPK_TEXTURE_HEADERS = 0x33310005,
+        BCHUNK_CARBON_TPK_FULL_DATA_BLOCK = 0x33320002,
 
         BCHUNK_CARBON_SCENERY_HEAD = 0x00034101,
         BCHUNK_CARBON_SCENERY_NAMES = 0x00034102,
@@ -415,6 +419,55 @@ namespace EAGLEye
     BYTE readByte(std::ifstream &stream);
 
     template<typename Data>
+    void hexdump(std::ofstream &stream, Data *data, size_t len = sizeof(Data))
+    {
+        unsigned int i;
+        unsigned int r, c;
+
+        if (data == nullptr)
+            return;
+
+        for (r = 0, i = 0; r < (len / 16 + static_cast<unsigned int>(len % 16 != 0)); r++, i += 16)
+        {
+            stream << boost::format("%04X:    ") % i;
+//            fprintf(stream, "%04X:   ", i); /* location of first byte in line */
+
+            for (c = i; c < i + 8; c++) /* left half of hex dump */
+                if (c < len)
+                    stream << boost::format("%02X ") % static_cast<int>(((unsigned char const *) data)[c]);
+//                    fprintf(stream, "%02X ", ((unsigned char const *) data)[c]);
+                else
+                    stream << "   ";
+//                    fprintf(stream, "   "); /* pad if short line */
+
+            stream << "  ";
+
+            for (c = i + 8; c < i + 16; c++) /* right half of hex dump */
+                if (c < len)
+                    stream << boost::format("%02X ") % static_cast<int>(((unsigned char const *) data)[c]);
+                else
+                    stream << "   "; /* pad if short line */
+
+            stream << "  ";
+
+            for (c = i; c < i + 16; c++) /* ASCII dump */
+                if (c < len)
+                    if (((unsigned char const *) data)[c] >= 32 &&
+                        ((unsigned char const *) data)[c] < 127)
+                        stream << boost::format("%c") % ((char const *) data)[c];
+//                        fprintf(stream, "%c", ((char const *) data)[c]);
+                    else
+                        stream << ".";
+//                        fprintf(stream, "."); /* put this for non-printables */
+                else
+                    stream << " ";
+//                    fprintf(stream, " "); /* pad if short line */
+
+            stream << std::endl;
+        }
+    }
+
+    template<typename Data>
     void hexdump(FILE *stream, Data *data, size_t len = sizeof(Data))
     {
         unsigned int i;
@@ -505,6 +558,8 @@ namespace EAGLEye
     }
 
     void dumpBytes(std::ifstream &stream, size_t bytes = 0);
+
+    void dumpBytesToFile(std::ifstream &stream, std::ofstream &output, size_t bytes = 0);
 }
 
 #endif //EAGLEYE_EAGLUTILS_H

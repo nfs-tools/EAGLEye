@@ -111,6 +111,7 @@ namespace EAGLEye
             ID_TPK_FILE = 0x310001,
             ID_TPK_TEXTURE_HASHES = 0x310002,
             ID_TPK_TEXTURE_NAMES = 0x310004,
+            ID_TEX_BINARYDATA = 0x320002,
 
             ID_FORCE_DWORD = 0x80FFFFFF
         };
