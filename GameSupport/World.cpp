@@ -204,8 +204,6 @@ namespace EAGLEye
 
                         std::vector<tVertex> vertices{};
 
-//                        printf("%s\n", -272872034315976222765729458319083438080.0 < std::numeric_limits<float>::min() ? "ARR" : "NAY");
-
                         for (int j = 0; j < numVertices; j++)
                         {
                             tVertex vertex{};

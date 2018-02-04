@@ -49,6 +49,15 @@ namespace EAGLEye
         long alignBase;
     };
 
+    struct TextureCatalog
+    {
+        TextureCatalog(TextureCatalog&&) = default;
+
+        std::string name;
+        std::string filename;
+        int32_t hash;
+    };
+
     class GlobalData
     {
     public:
