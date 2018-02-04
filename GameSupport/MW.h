@@ -17,15 +17,6 @@ namespace EAGLEye
             float nx, ny, nz;
             DWORD color;
             float u, v;
-
-            Point3D toPoint()
-            {
-                Point3D point{};
-                point.x = x;
-                point.y = y;
-                point.z = z;
-                return point;
-            }
         };
 
         struct PACK tWorldVertex
@@ -34,15 +25,6 @@ namespace EAGLEye
             float nx, ny, nz;
             DWORD color;
             float u, v;
-
-            Point3D toPoint()
-            {
-                Point3D point{};
-                point.x = x;
-                point.y = y;
-                point.z = z;
-                return point;
-            }
         };
 
         struct PACK tFace

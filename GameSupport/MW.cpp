@@ -374,6 +374,8 @@ namespace EAGLEye
                             geoFace.vB = face.vB;
                             geoFace.vC = face.vC;
 
+                            printf("f %d %d %d\n", geoFace.vA + 1, geoFace.vB + 1, geoFace.vC + 1);
+
                             catalog->items[catalog->items.size() - 1]->mesh.faces.emplace_back(geoFace);
                         }
 
@@ -404,6 +406,17 @@ namespace EAGLEye
                             }
                         } else
                         {
+                            size_t numVertices = partSize / sizeof(tWorldVertex);
+
+                            printf("Number of vertices: %zu\n", numVertices);
+
+                            for (int j = 0; j < numVertices; j++)
+                            {
+                                tWorldVertex vertex{};
+                                partBytesRead += readGeneric(ifstream, vertex);
+
+                                printf("v %.4f %.4f %.4f\n", vertex.x, vertex.y, vertex.z);
+                            }
 //                            size_t fixedSize = partSize;
 //
 //                            partBytesRead++;
