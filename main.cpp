@@ -5,11 +5,12 @@
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "eagldata.h"
+#include "eaglenums.h"
 #include "eaglutils.h"
-#include "chunkbase.h"
-#include "GameSupport/MW.h"
-#include "GameSupport/Carbon.h"
-#include "GameSupport/World.h"
+
+#include "containers/carbon/CarbonChunkyContainer.h"
+#include "containers/mw/MWChunkyContainer.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -29,14 +30,10 @@ EAGLEye::FileType determineFileType(std::ifstream &ifstream, fs::path &path)
 
     ifstream.seekg(curPos);
 
-    if (buf[0] == 'J' && buf[1] == 'D' && buf[2] == 'L' && buf[3] == 'Z')
+    if ((buf[0] == 'J' && buf[1] == 'D' && buf[2] == 'L' && buf[3] == 'Z')
+            || (buf[0] == 0x88 && buf[1] == 0x33 && buf[2] == 0x11 && buf[3] == 0x66))
     {
         return EAGLEye::FileType::COMPRESSED;
-    }
-
-    if (buf[0] == 0x12 && buf[1] == 0x41 && buf[2] == 0x03 && buf[3] == 0x00)
-    {
-        return EAGLEye::FileType::LOCATION_BASE;
     }
 
     return EAGLEye::FileType::NORMAL;
@@ -69,7 +66,8 @@ int main(int argc, char **argv)
         if ((foundGame_ = EAGLEye::gameMap.find(gameId_)) == EAGLEye::gameMap.end())
         {
             std::cerr << "Unknown game! Possible values: "
-                      << boost::algorithm::join(EAGLEye::extract_keys(EAGLEye::gameMap), ", ") << std::endl;
+                      << boost::algorithm::join(EAGLEye::extract_keys<std::string, int>(EAGLEye::gameMap), ", ")
+                      << std::endl;
             return 1;
         }
 
@@ -100,39 +98,26 @@ int main(int argc, char **argv)
             switch (foundGame_->second)
             {
                 case 0x2:
-                    if (action == "generate-stream")
+                {
+                    if (fileType == EAGLEye::FileType::NORMAL)
                     {
-                        EAGLEye::MW::GenerateStreamFile();
-                    } else
-                    {
-                        EAGLEye::MW::HandleFile(filePath, stream, fileType);
-                    }
+                        auto *container = new EAGLEye::Containers::MWChunkyContainer(stream);
 
+                        container->ReadData();
+                    }
                     break;
+                }
                 case 0x5:
-                    if (action == "generate-stream")
+                {
+                    if (fileType == EAGLEye::FileType::NORMAL)
                     {
+                        auto *container = new EAGLEye::Containers::CarbonChunkyContainer(stream);
 
-                    } else
-                    {
-                        if (boost::algorithm::to_upper_copy(inputFileType) == "CAR")
-                        {
-                            EAGLEye::Carbon::HandleCarFile(filePath, stream);
-                        } else
-                        {
-                            EAGLEye::Carbon::HandleFile(filePath, stream, fileType);
-                        }
+                        container->ReadData();
                     }
-                    break;
-                case 0x5a:
-                    if (action == "generate-stream")
-                    {
 
-                    } else
-                    {
-                        EAGLEye::World::HandleFile(filePath, stream, fileType);
-                    }
                     break;
+                }
                 default:
                     break;
             }
