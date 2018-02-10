@@ -24,6 +24,6 @@ set(SOURCE_FILES
         containers/carbon/CarbonChunkyContainer.cpp
         containers/mw/MWChunkyContainer.h
         containers/mw/MWChunkyContainer.cpp
-        containers/carbon/CarbonTPKContainer.cpp containers/carbon/CarbonTPKContainer.h data/tpk/TexturePack.cpp data/tpk/TexturePack.h)
+        containers/carbon/CarbonTPKContainer.cpp containers/carbon/CarbonTPKContainer.h data/tpk/TexturePack.cpp data/tpk/TexturePack.h data/resources/LanguageDefinition.cpp data/resources/LanguageDefinition.h containers/carbon/CarbonLanguageContainer.cpp containers/carbon/CarbonLanguageContainer.h containers/world/WorldChunkyContainer.cpp containers/world/WorldChunkyContainer.h containers/world/WorldCompressedContainer.cpp containers/world/WorldCompressedContainer.h containers/world/WorldTPKContainer.cpp containers/world/WorldTPKContainer.h containers/world/WorldVPAKContainer.cpp containers/world/WorldVPAKContainer.h containers/world/WorldStructs.h containers/carbon/CarbonFontContainer.cpp containers/carbon/CarbonFontContainer.h containers/carbon/CarbonSectionsContainer.cpp containers/carbon/CarbonSectionsContainer.h chunk/ChunkIO.cpp chunk/ChunkIO.h containers/carbon/CarbonELightContainer.cpp containers/carbon/CarbonELightContainer.h containers/carbon/CarbonSceneryContainer.cpp containers/carbon/CarbonSceneryContainer.h data/world/SceneryContainer.h)
 add_executable(EAGLEye ${SOURCE_FILES})
 target_link_libraries(EAGLEye ${Boost_LIBRARIES} ${GLM_LIBRARIES})

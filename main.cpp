@@ -9,8 +9,14 @@
 #include "eaglenums.h"
 #include "eaglutils.h"
 
-#include "containers/carbon/CarbonChunkyContainer.h"
+#include "chunk/ChunkIO.h"
 #include "containers/mw/MWChunkyContainer.h"
+
+#include "containers/carbon/CarbonChunkyContainer.h"
+
+#include "containers/world/WorldChunkyContainer.h"
+#include "containers/world/WorldCompressedContainer.h"
+#include "containers/world/WorldVPAKContainer.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -31,9 +37,14 @@ EAGLEye::FileType determineFileType(std::ifstream &ifstream, fs::path &path)
     ifstream.seekg(curPos);
 
     if ((buf[0] == 'J' && buf[1] == 'D' && buf[2] == 'L' && buf[3] == 'Z')
-            || (buf[0] == 0x88 && buf[1] == 0x33 && buf[2] == 0x11 && buf[3] == 0x66))
+        || (buf[0] == 0x88 && buf[1] == 0x33 && buf[2] == 0x11 && buf[3] == 0x66))
     {
         return EAGLEye::FileType::COMPRESSED;
+    }
+
+    if (buf[0] == 'V' && buf[1] == 'P' && buf[2] == 'A' && buf[3] == 'K')
+    {
+        return EAGLEye::FileType::VPAK;
     }
 
     return EAGLEye::FileType::NORMAL;
@@ -99,23 +110,76 @@ int main(int argc, char **argv)
             {
                 case 0x2:
                 {
-                    if (fileType == EAGLEye::FileType::NORMAL)
+                    if (action.empty())
                     {
-                        auto *container = new EAGLEye::Containers::MWChunkyContainer(stream);
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::MWChunkyContainer(stream);
 
-                        container->ReadData();
+                            container->Get();
+                        }
+                    } else if (action == "extract")
+                    {
+                        EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
+                    } else if (action == "pack")
+                    {
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
+                                                          boost::filesystem::path(filePath.stem().string() +
+                                                                                  std::string("-repack.BUN")));
                     }
                     break;
                 }
                 case 0x5:
                 {
-                    if (fileType == EAGLEye::FileType::NORMAL)
+                    if (action.empty())
                     {
-                        auto *container = new EAGLEye::Containers::CarbonChunkyContainer(stream);
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::CarbonChunkyContainer(stream, filePath);
 
-                        container->ReadData();
+                            container->Get();
+                        }
+                    } else if (action == "extract")
+                    {
+                        EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
+                    } else if (action == "pack")
+                    {
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
+                                                          boost::filesystem::path(filePath.stem().string() +
+                                                                                  std::string("-repack.BUN")));
                     }
 
+                    break;
+                }
+                case 0x5a:
+                {
+                    if (action.empty())
+                    {
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::WorldChunkyContainer(stream);
+
+                            container->Get();
+                        } else if (fileType == EAGLEye::FileType::COMPRESSED)
+                        {
+                            auto *container = new EAGLEye::Containers::WorldCompressedContainer(stream, filePath);
+
+                            container->Get();
+                        } else if (fileType == EAGLEye::FileType::VPAK)
+                        {
+                            auto *container = new EAGLEye::Containers::WorldVPAKContainer(stream);
+
+                            container->Get();
+                        }
+                    } else if (action == "extract")
+                    {
+                        EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
+                    } else if (action == "pack")
+                    {
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
+                                                          boost::filesystem::path(filePath.stem().string() +
+                                                                                  std::string("-repack.BUN")));
+                    }
                     break;
                 }
                 default:

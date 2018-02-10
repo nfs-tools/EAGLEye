@@ -10,15 +10,16 @@ namespace EAGLEye
         class TexturePack
         {
         public:
-            explicit TexturePack() = default;
+            TexturePack()
+            = default;
 
-            TexturePack(const TexturePack &c) = delete;
+            ~TexturePack()
+            = default;
 
-            TexturePack(const TexturePack &&c) = delete;
-
-            TexturePack &operator=(const TexturePack &c) = delete;
-
-            TexturePack &operator=(const TexturePack &&c) = delete;
+            std::string name;
+            int32_t hash;
+            std::string tpkPath;
+            std::vector<int32_t> hashTable;
         };
     }
 }

@@ -11,6 +11,31 @@
 
 namespace EAGLEye
 {
+    class JDLZ
+    {
+#define HEADER_SIZE 16
+    public:
+        static std::vector<BYTE> decompress(std::vector<BYTE> input, int size = -1);
+    };
+
+    class BitConverter
+    {
+    public:
+        static int16_t ToInt16(const BYTE bytes[], int offset);
+
+        static uint16_t ToUInt16(const BYTE bytes[], int offset);
+
+        static int32_t ToInt32(const BYTE bytes[], int offset);
+
+        static uint32_t ToUInt32(const BYTE bytes[], int offset);
+
+        static uint64_t ToUInt64(const BYTE bytes[], int offset);
+
+        static std::vector<BYTE> GetBytes(int value);
+
+        static std::vector<BYTE> GetBytes(long value);
+    };
+
     template<typename T>
     size_t readGeneric(std::ifstream &stream, T &data, size_t size = sizeof(T))
     {
@@ -42,6 +67,8 @@ namespace EAGLEye
 
         return size;
     }
+
+    size_t readString(std::ifstream &stream, std::string& out);
 
     template<typename K, typename V>
     std::vector<K> extract_keys(std::map<K, V> const &input_map)

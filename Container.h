@@ -3,6 +3,8 @@
 
 #include "eaglutils.h"
 
+#include <boost/filesystem/path.hpp>
+
 namespace EAGLEye
 {
     namespace Containers
@@ -21,7 +23,7 @@ namespace EAGLEye
             {
             }
 
-            virtual T ReadData()= 0;
+            virtual T Get()= 0;
 
             virtual ~Container() = default;
 
@@ -32,6 +34,9 @@ namespace EAGLEye
             Container &operator=(const Container &c) = delete;
 
             Container &operator=(const Container &&c) = delete;
+
+        private:
+            virtual size_t ReadChunks(uint32_t totalSize) = 0;
 
         protected:
             std::ifstream &m_stream;

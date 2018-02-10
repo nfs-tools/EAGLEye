@@ -11,20 +11,37 @@ namespace EAGLEye
     {
         using TPK = EAGLEye::Data::TexturePack;
 
+        /**
+         * Chunk IDs relating to Carbon's TPK format
+         */
         enum CarbonTPKChunks
         {
+            CARBON_TPK = 0xb3310000,
+            CARBON_TPK_TEXTURE_DATA = 0xb3320000,
 
+            CARBON_TPK_PART_INFO = 0x33310001,
+            CARBON_TPK_PART_HASHES = 0x33310002,
+            CARBON_TPK_PART_DYNAMIC_DATA = 0x33310003,
+            CARBON_TPK_PART_HEADERS = 0x33310004,
+            CARBON_TPK_PART_DXT_HEADERS = 0x3331005,
+            CARBON_TPK_ANIMATED_TEXTURES = 0xb3312000,
+            CARBON_TPK_ANIMATED_TEXTURES_ROOT = 0xb3312004,
+            CARBON_TPK_ANIMATED_TEXTURES_ENTRIES = 0x33312001,
+            CARBON_TPK_ANIMATED_TEXTURES_HASHES = 0x33312002,
         };
 
         class CarbonTPKContainer : public Container<std::shared_ptr<TPK>>
         {
         public:
-            CarbonTPKContainer(std::ifstream& stream, uint32_t containerSize);
+            CarbonTPKContainer(std::ifstream &stream, uint32_t containerSize);
 
-            std::shared_ptr<TPK> ReadData() override;
+            std::shared_ptr<TPK> Get() override;
+
         private:
             uint32_t m_containerSize;
-            TPK* m_tpk;
+            TPK *m_tpk;
+
+            size_t ReadChunks(uint32_t totalSize) override;
         };
     }
 }

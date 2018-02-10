@@ -5,6 +5,24 @@
 
 namespace EAGLEye
 {
+    typedef struct StreamInfoStruct
+    {
+        char ModelGroupName[8];
+        unsigned int StreamChunkNumber;
+        unsigned int Unk2;
+        unsigned int MasterStreamChunkNumber;
+        unsigned int MasterStreamChunkOffset;
+        unsigned int Size1;
+        unsigned int Size2;
+        unsigned int Size3;
+        unsigned int Unk3;
+        float X;
+        float Y;
+        float Z;
+        unsigned int StreamChunkHash;
+        unsigned char RestOfData[0x24];
+    } *StreamInfo;
+
     static const std::map<std::string, int> gameMap = {
             {"MW05",   0x2},
             {"UG2",    0x4},
@@ -18,7 +36,7 @@ namespace EAGLEye
             {0x80134000, "BCHUNK_SPEED_ESOLID_LIST_CHUNKS"},
             {0x80034100, "BCHUNK_SPEED_SCENERY_SECTION"},
             {0x00034027, "BCHUNK_SPEED_SMOKEABLE_SPAWNER"},
-            {0x00034110, "BCHUNK_TRACKSTREAMER_0"},
+            {0x00034110, "BCHUNK_TRACKSTREAMER_SECTIONS"},
             {0x00034111, "BCHUNK_TRACKSTREAMER_1"},
             {0x00034112, "BCHUNK_TRACKSTREAMER_2"},
             {0x00034113, "BCHUNK_TRACKSTREAMER_3"},
