@@ -3,6 +3,7 @@
 
 #include "../../Container.h"
 #include "../../eaglenums.h"
+#include "CarbonAnimationManager.h"
 
 namespace EAGLEye
 {
@@ -12,7 +13,8 @@ namespace EAGLEye
         {
         public:
             explicit CarbonChunkyContainer(std::ifstream &stream, boost::filesystem::path &path) : Container(stream),
-                                                                                                   m_path(path)
+                                                                                                   m_path(path),
+                                                                                                   m_animationManager(nullptr)
             {}
 
             void Get() override;
@@ -21,6 +23,7 @@ namespace EAGLEye
             size_t ReadChunks(uint32_t totalSize) override;
 
             boost::filesystem::path m_path;
+            CarbonAnimationManager* m_animationManager;
         };
     }
 }

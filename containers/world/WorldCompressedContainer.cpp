@@ -7,76 +7,70 @@ namespace EAGLEye
     {
         void WorldCompressedContainer::Get()
         {
-            BYTE marker[4];
-            readGenericArray(m_stream, marker, sizeof(marker));
-
-            assert(marker[0] == 0x88 && marker[1] == 0x33 && marker[2] == 0x11 && marker[3] == 0x66);
-
-            m_stream.ignore(4);
-
-            uint32_t dataSize; // ???
-
-            readGeneric(m_stream, dataSize);
-
-            printf("Data Size: %d bytes\n", dataSize);
-
             long fileLength = getFileLength(this->m_stream);
             printf("Here we are! File length: %lu\n", fileLength);
 
-            int blockIndex = 0;
+            m_stream.seekg(0x10);
 
-            while (m_stream.tellg() < fileLength)
+            for (int i = 0; i < 1; i++)
             {
-                BYTE tmpBytes[4];
-                readGenericArray(m_stream, tmpBytes, sizeof(tmpBytes));
+                int32_t sign;
 
-                if (tmpBytes[0] == 0x22 && tmpBytes[1] == 0x11 && tmpBytes[2] == 0x44 && tmpBytes[3] == 0x55)
+                readGeneric(m_stream, sign);
+
+                if (sign == 0x55441122)
                 {
-                    printf("found compressed block\n");
-                    int size, xsize;
+                    uint32_t size, xsize;
                     readGeneric(m_stream, size);
                     readGeneric(m_stream, xsize);
-                    printf("size = %d, xsize = %d\n", size, xsize);
+
                     m_stream.ignore(0xc);
 
-                    auto pos = (long) m_stream.tellg();
-
+                    auto curPos = (long) m_stream.tellg();
                     char zipSign[4];
-                    readGenericArray(m_stream, zipSign, 4);
 
+                    readGenericArray(m_stream, zipSign, 4);
 
                     if (zipSign[0] == 'J' && zipSign[1] == 'D' && zipSign[2] == 'L' && zipSign[3] == 'Z')
                     {
-                        printf("JDLZ\n");
+                        printf("JDLZ!\n");
 
-                        m_stream.ignore(4);
+                        int skipBytes = 0x10;
 
-                        int jSize, jZSize;
+                        BYTE zipFlag = readByte(m_stream),
+                                dummyB = readByte(m_stream);
+                        m_stream.ignore(2);
 
-                        readGeneric(m_stream, jSize);
-                        readGeneric(m_stream, jZSize);
+                        int bSize, bzSize;
 
-                        auto dumpPos = (long) m_stream.tellg();
+                        readGeneric(m_stream, bSize);
+                        readGeneric(m_stream, bzSize);
 
-                        m_stream.seekg(pos);
+                        printf("bSize = %d, bzSize = %d\n", bSize, bzSize);
 
-                        std::vector<BYTE> data;
-                        data.resize(jZSize);
+                        m_stream.seekg(curPos);
 
-                        m_stream.read((char *) &data[0], jZSize);
+                        std::vector<BYTE> compressed, uncompressed;
+                        compressed.resize(bzSize);
+                        uncompressed.resize(bSize);
 
-                        std::vector<BYTE> uncompressed = JDLZ::decompress(data, jSize);
-                        assert(uncompressed.size() == jSize);
-                        hexdump(stdout, uncompressed.data(), 256);
+//                        BYTE compressedData[bzSize];
+//                        BYTE uncompressedData[bSize];
 
-                        printf("jSize = %d | jZSize = %d | dumpPos = %lu\n", jSize, jZSize, dumpPos);
+                        m_stream.read((char *) &compressed[0], compressed.size());
+
+                        uncompressed = JDLZ::decompress(compressed, bSize);
+
+                        hexdump(stdout, uncompressed.data(), 512);
+
+//                        curPos = (long) m_stream.tellg();
                     }
 
-                    m_stream.seekg((pos + xsize) - m_stream.tellg(), m_stream.cur);
-//                    dumpBytes(m_stream, 12);
-//                    m_stream.seekg(xsize, m_stream.cur);
+                    dumpBytes(m_stream, 256);
                 }
             }
+
+//            dumpBytes(m_stream, 512);
         }
 
         size_t WorldCompressedContainer::ReadChunks(uint32_t totalSize)

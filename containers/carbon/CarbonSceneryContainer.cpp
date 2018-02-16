@@ -1,5 +1,7 @@
 #include "CarbonSceneryContainer.h"
 
+#include <boost/algorithm/clamp.hpp>
+
 namespace EAGLEye
 {
     namespace Containers
@@ -29,14 +31,11 @@ namespace EAGLEye
 
                 size_t bytesRead = 0;
 
-                printf("    Scenery Chunk #%02d: 0x%08x\n", i + 1, id);
-
                 switch (id)
                 {
                     case BCHUNK_SCENERY_SECTION_NAMES:
                     {
                         uint32_t entries = size / 72;
-                        printf("Entries: %d\n", entries);
 
                         m_scenery.resize(entries);
 
@@ -45,20 +44,17 @@ namespace EAGLEye
                             SceneryStruct sceneryStruct{};
 
                             bytesRead += readGeneric(m_stream, sceneryStruct);
-
-                            printf("#%d: %s\n", j + 1, sceneryStruct.name);
                         }
 
                         break;
                     }
                     default:
-                        printf("    * Passing unhandled scenery chunk\n");
                         break;
                 }
 
 
                 assert(bytesRead <= size);
-                dumpBytes(m_stream, size - bytesRead);
+//                dumpBytes(m_stream, boost::algorithm::clamp(size - bytesRead, 0, 512));
 
                 totalBytesRead += bytesRead;
                 m_stream.ignore(size - bytesRead);

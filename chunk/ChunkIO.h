@@ -5,29 +5,36 @@
 #include "../eaglutils.h"
 #include "../eaglenums.h"
 
+#include <iostream>
+#include <fstream>
+
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+
+#define STREAMINFOCHUNK 0x00034110
 
 namespace EAGLEye
 {
     namespace Chunks
     {
-        typedef struct StreamInfoStruct
+        typedef struct PACK StreamInfoStruct
         {
-            char ModelGroupName[8];
-            unsigned int StreamChunkNumber;
-            unsigned int Unk2;
-            unsigned int MasterStreamChunkNumber;
-            unsigned int MasterStreamChunkOffset;
-            unsigned int Size1;
-            unsigned int Size2;
-            unsigned int Size3;
-            unsigned int Unk3;
-            float X;
-            float Y;
-            float Z;
-            unsigned int StreamChunkHash;
-            unsigned char RestOfData[0x24]; // 0x24 for MW, 0x1C for Carbon TODO: add game detection or something idk
+            char ModelGroupName[8]; // 8
+            unsigned int StreamChunkNumber; // 12
+            unsigned int Unk2; // 16
+            unsigned int MasterStreamChunkNumber; // 20
+            unsigned int MasterStreamChunkOffset; // 24
+            unsigned int Size1; // 28
+            unsigned int Size2; // 32
+            unsigned int Size3; // 36
+            unsigned int Unk3; // 40
+            float X; // 44
+            float Y; // 48
+            float Z; // 52
+            unsigned int StreamChunkHash; // 56
+
+            // 0x24 for MW, 0x1C for Carbon TODO: add game detection or something idk
+            unsigned char RestOfData[0x24]; // 92
         } *StreamInfo;
 
         void
@@ -40,19 +47,28 @@ namespace EAGLEye
         /**
          * Stream functions
          */
-        unsigned int SearchAlignedChunkByType(boost::filesystem::path& Filename, unsigned int ChunkMagic, long &OffsetOut);
+        unsigned int
+        SearchAlignedChunkByType(boost::filesystem::path &Filename, unsigned int ChunkMagic, long &OffsetOut);
 
         StreamInfo CreateStreamInfoBuffer(unsigned int InfoCount);
 
         unsigned int GetInfoCount(unsigned int InfoChunkSize);
 
-        StreamInfo StreamInfoReader(unsigned int InfoCount, long InfoChunkAddress, boost::filesystem::path& LocBundlePath);
+        StreamInfo
+        StreamInfoReader(unsigned int InfoCount, long InfoChunkAddress, boost::filesystem::path &LocBundlePath);
 
-        bool ExtractAllStreamParts(StreamInfo TheStreamInfo, unsigned int InfoCount, boost::filesystem::path& StreamPath, boost::filesystem::path& OutFolderPath);
+        bool
+        ExtractAllStreamParts(StreamInfo TheStreamInfo, unsigned int InfoCount, boost::filesystem::path &StreamPath,
+                              boost::filesystem::path &OutFolderPath);
 
-        bool ExtractStreamPartByNumber(unsigned int StreamPartNumber, StreamInfo TheStreamInfo, unsigned int InfoCount, boost::filesystem::path& StreamFilename, boost::filesystem::path& OutFolderPath);
+        bool ExtractStreamPartByNumber(unsigned int StreamPartNumber, StreamInfo TheStreamInfo, unsigned int InfoCount,
+                                       boost::filesystem::path &StreamFilename, boost::filesystem::path &OutFolderPath);
 
-        int CombineChunks(boost::filesystem::path& LocBundle, boost::filesystem::path& StreamChunkPaths, boost::filesystem::path& OutPath);
+        int CombineStreamChunks(boost::filesystem::path &LocBundle, boost::filesystem::path &StreamChunkPaths,
+                                boost::filesystem::path &OutPath);
+
+        int ExtractStreamChunks(boost::filesystem::path &LocBundle,
+                                boost::filesystem::path &OutPath);
     }
 }
 

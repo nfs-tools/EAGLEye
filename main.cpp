@@ -123,7 +123,8 @@ int main(int argc, char **argv)
                         EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
                     } else if (action == "pack")
                     {
-                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
+                                                          filePath.filename(),
                                                           boost::filesystem::path(filePath.stem().string() +
                                                                                   std::string("-repack.BUN")));
                     }
@@ -142,11 +143,26 @@ int main(int argc, char **argv)
                     } else if (action == "extract")
                     {
                         EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
+                    } else if (action == "extract-stream")
+                    {
+                        boost::filesystem::path dumpPath = boost::filesystem::absolute("chunk-dump-5a");
+                        EAGLEye::Chunks::ExtractStreamChunks(filePath, dumpPath);
+                    } else if (action == "combine-stream")
+                    {
+                        boost::filesystem::path dumpPath = boost::filesystem::absolute("chunk-dump-5a");
+                        boost::filesystem::path outPath = boost::filesystem::path(filePath.parent_path());
+                        EAGLEye::Chunks::CombineStreamChunks(filePath, dumpPath, outPath);
                     } else if (action == "pack")
                     {
-                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
-                                                          boost::filesystem::path(filePath.stem().string() +
-                                                                                  std::string("-repack.BUN")));
+                        boost::filesystem::path repackPath = boost::filesystem::path(filePath.parent_path());
+                        repackPath.append(filePath.filename().stem().string());
+                        repackPath += "-repack.BUN";
+
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(), repackPath);
+
+//                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
+//                                                          filePath.filename(),
+//                                                          boost::filesystem::path(filePath.parent_path() + filePath.filename().stem() + std::string("-repack")));
                     }
 
                     break;
@@ -176,7 +192,8 @@ int main(int argc, char **argv)
                         EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
                     } else if (action == "pack")
                     {
-                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(),
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
+                                                          filePath.filename(),
                                                           boost::filesystem::path(filePath.stem().string() +
                                                                                   std::string("-repack.BUN")));
                     }

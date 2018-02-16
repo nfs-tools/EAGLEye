@@ -37,11 +37,14 @@ namespace EAGLEye
 
                         break;
                     }
+                    case BCHUNK_TRACKSTREAMER_SECTIONS:
+                    {
+                        dumpBytes(m_stream, 512);
+                    }
                     default:
+                        m_stream.ignore(size);
                         break;
                 }
-
-                m_stream.ignore(size);
             }
         }
 

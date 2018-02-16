@@ -124,7 +124,7 @@ namespace EAGLEye
         int inPos = HEADER_SIZE, outPos = 0;
 
         // TODO: Can we always trust the header's stated length?
-        // Update: Apparently not.
+        // Update: Apparently not?
 
         std::vector<BYTE> output;
         output.resize(size == -1 ? static_cast<unsigned long>(BitConverter::ToInt32(input.data(), 8)) : size);
