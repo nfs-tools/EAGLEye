@@ -22,6 +22,34 @@ namespace EAGLEye
             float m30, m31, m32, m33;
         };
     };
+
+    struct PACK GeometryFileInfo
+    {
+        uint32_t blnk1;
+        uint32_t blnk2;
+        uint32_t tTagA;
+        uint32_t tTagB;
+        char path[56];
+        char section[4];
+        uint32_t unknownData[7];
+        uint32_t unkVarA;
+        uint32_t unkVarB;
+        uint32_t unkVarC;
+        uint32_t unkData2[7];
+    };
+
+    struct PACK GeometryObjectHeader
+    {
+        BYTE zero[16]; // 16
+        BYTE pad[4]; // +4 = 20
+        long numTris; // +4 = 24
+        BYTE pad2[8]; // +4 = 32
+        Point3D minPoint; // +16 = 48
+        Point3D maxPoint; // +16 = 64
+        Matrix matrix; // +64 = 128
+        DWORD unk3[8]; // +32 = 160
+        std::string name;
+    };
 }
 
 #endif //EAGLEYE_EAGLTYPES_H

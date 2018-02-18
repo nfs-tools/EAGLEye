@@ -26,12 +26,6 @@ namespace EAGLEye
 
             this->m_animationManager = new CarbonAnimationManager;
             this->ReadChunks(static_cast<uint32_t>(fileLength));
-
-//            this->ExtractToFolder(boost::filesystem::absolute("dump"));
-//            this->CombineFromFiles(boost::filesystem::absolute("dump"), m_path.filename(),
-//                                   boost::filesystem::path(m_path.stem().string() + std::string("-mod.BUN")));
-
-//            EAGLEye::Chunks::ExtractChunks("data/carbon/TRACKS/L5RA.BUN", "data/carbon/TRACKS/L5RA-DUMP");
         }
 
         void padHelper(std::ifstream& stream)

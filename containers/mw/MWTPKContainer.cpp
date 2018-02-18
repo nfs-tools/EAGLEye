@@ -31,7 +31,8 @@ namespace EAGLEye
 
                 size_t bytesRead = 0;
 
-//                printf("    TPK Chunk #%02d: 0x%08x\n", i + 1, id);
+                printf("    TPK Chunk #%02d: 0x%08x [%d bytes @ 0x%08lx]\n", i + 1, id, size,
+                       (unsigned long) m_stream.tellg());
 
                 switch (id)
                 {
@@ -78,8 +79,33 @@ namespace EAGLEye
                             bytesRead += readGeneric(m_stream, hash);
                             m_stream.ignore(4);
                             bytesRead += 4;
+
+                            printf("Hash #%d: 0x%08x\n", j + 1, hash);
+                            m_tpk->hashTable.emplace_back(hash);
                         }
 
+                        break;
+                    }
+                    case MW_TPK_PART_HEADERS:
+                    {
+                        for (int j = 0; j < m_tpk->hashTable.size(); j++)
+                        {
+                            tTextureHeader textureHeader{};
+                            bytesRead += readGeneric(m_stream, textureHeader);
+
+                            BYTE data[88];
+                            m_stream.read((char *) &data[0], sizeof(data));
+
+                            int32_t hash = BitConverter::ToInt32(data, 0);
+                            int32_t hash2 = BitConverter::ToInt32(data, 4);
+
+                            printf("#%d: %s [0x%08x/0x%08x]\n",
+                                   j + 1, textureHeader.name, hash, hash2);
+
+                            hexdump(stdout, &data, sizeof(data));
+
+                            bytesRead += sizeof(data);
+                        }
                         break;
                     }
                     default:

@@ -129,18 +129,8 @@ namespace EAGLEye
             }
         }
 
-        unsigned int
-        SearchAlignedChunkByType(boost::filesystem::path &Filename, unsigned int ChunkMagic, long &OffsetOut)
+        unsigned int SearchAlignedChunkByType(std::ifstream &stream, unsigned int ChunkMagic, long &OffsetOut)
         {
-            std::ifstream stream(Filename.string(), std::ios::binary);
-
-            if (stream.bad())
-            {
-                printf("%s Can't open file: %s\n", "ERROR:", Filename.c_str());
-                perror("ERROR");
-                return 0;
-            }
-
             unsigned int ReadMagic = 0;
             unsigned int ReadSize = 0;
 
@@ -159,6 +149,21 @@ namespace EAGLEye
             }
 
             return ReadSize;
+        }
+
+        unsigned int
+        SearchAlignedChunkByType(boost::filesystem::path &Filename, unsigned int ChunkMagic, long &OffsetOut)
+        {
+            std::ifstream stream(Filename.string(), std::ios::binary);
+
+            if (stream.bad())
+            {
+                printf("%s Can't open file: %s\n", "ERROR:", Filename.c_str());
+                perror("ERROR");
+                return 0;
+            }
+
+            return SearchAlignedChunkByType(stream, ChunkMagic, OffsetOut);
         }
 
         unsigned int GetInfoCount(unsigned int InfoChunkSize)

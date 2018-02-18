@@ -50,6 +50,8 @@ namespace EAGLEye
         unsigned int
         SearchAlignedChunkByType(boost::filesystem::path &Filename, unsigned int ChunkMagic, long &OffsetOut);
 
+        unsigned int SearchAlignedChunkByType(std::ifstream &stream, unsigned int ChunkMagic, long &OffsetOut);
+
         StreamInfo CreateStreamInfoBuffer(unsigned int InfoCount);
 
         unsigned int GetInfoCount(unsigned int InfoChunkSize);

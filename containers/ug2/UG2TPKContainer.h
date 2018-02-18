@@ -1,5 +1,5 @@
-#ifndef EAGLEYE_MWTPKCONTAINER_H
-#define EAGLEYE_MWTPKCONTAINER_H
+#ifndef EAGLEYE_UG2TPKCONTAINER_H
+#define EAGLEYE_UG2TPKCONTAINER_H
 
 #include "../../Container.h"
 #include "../../eaglenums.h"
@@ -10,12 +10,6 @@ namespace EAGLEye
     namespace Containers
     {
         using TPK = EAGLEye::Data::TexturePack;
-
-        struct PACK tTextureHeader
-        {
-            DWORD m_dwZero1[3];
-            char name[24];
-        };
 
         struct tDDSHeader
         {
@@ -52,23 +46,26 @@ namespace EAGLEye
         };
 
         /**
-         * Chunk IDs relating to MW's TPK format
-         */
-        enum MWTPKChunks
+        * Chunk IDs relating to UG2's TPK format
+        */
+        enum UG2TPKChunks
         {
-            MW_TPK = 0xb3310000,
-            MW_TPK_TEXTURE_DATA_ROOT = 0xb3320000,
-            MW_TPK_PART_INFO = 0x33310001,
-            MW_TPK_PART_HASHES = 0x33310002,
-            MW_TPK_PART_DYNAMIC_DATA = 0x33310003,
-            MW_TPK_PART_HEADERS = 0x33310004,
-            MW_TPK_PART_DXT_HEADERS = 0x3331005,
+            UG2_TPK = 0xb3310000,
+            UG2_TPK_PART_INFO = 0x33310001,
+            UG2_TPK_PART_HASHES = 0x33310002,
+            UG2_TPK_PART_DYNAMIC_DATA = 0x33310003,
+            UG2_TPK_PART_HEADERS = 0x33310004,
+            UG2_TPK_PART_DXT_HEADERS = 0x3331005,
+            UG2_TPK_ANIMATED_TEXTURES = 0xb3312000,
+            UG2_TPK_ANIMATED_TEXTURES_ROOT = 0xb3312004,
+            UG2_TPK_ANIMATED_TEXTURES_ENTRY = 0x33312001,
+            UG2_TPK_ANIMATED_TEXTURES_HASHES = 0x33312002,
         };
 
-        class MWTPKContainer : public Container<std::shared_ptr<TPK>>
+        class UG2TPKContainer : public Container<std::shared_ptr<TPK>>
         {
         public:
-            MWTPKContainer(std::ifstream &stream, uint32_t containerSize);
+            UG2TPKContainer(std::ifstream &stream, uint32_t containerSize);
 
             std::shared_ptr<TPK> Get() override;
 
@@ -81,4 +78,5 @@ namespace EAGLEye
     }
 }
 
-#endif //EAGLEYE_MWTPKCONTAINER_H
+
+#endif //EAGLEYE_UG2TPKCONTAINER_H

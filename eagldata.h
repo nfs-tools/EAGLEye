@@ -27,7 +27,9 @@ namespace EAGLEye
             {"MW05",   0x2},
             {"UG2",    0x4},
             {"CARBON", 0x5},
-            {"WORLD",  0x5a}
+            {"WORLD",  0x5a},
+            {"PS",     0x6},
+            {"UC",     0x8}
     };
 
     static const std::map<int, std::string> chunkIdMap = {

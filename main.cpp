@@ -11,12 +11,19 @@
 
 #include "chunk/ChunkIO.h"
 #include "containers/mw/MWChunkyContainer.h"
+#include "containers/mw/MWLocationContainer.h"
 
 #include "containers/carbon/CarbonChunkyContainer.h"
 
 #include "containers/world/WorldChunkyContainer.h"
 #include "containers/world/WorldCompressedContainer.h"
 #include "containers/world/WorldVPAKContainer.h"
+
+#include "containers/uc/UndercoverChunkyContainer.h"
+#include "containers/uc/UndercoverLocationContainer.h"
+#include "containers/ug2/UG2ChunkyContainer.h"
+#include "containers/prostreet/PSChunkyContainer.h"
+#include "containers/prostreet/PSLocationContainer.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -118,15 +125,11 @@ int main(int argc, char **argv)
 
                             container->Get();
                         }
-                    } else if (action == "extract")
+                    } else if (action == "read-locbundle")
                     {
-                        EAGLEye::Chunks::ExtractChunksToFolder(filePath, boost::filesystem::absolute("chunk-dump"));
-                    } else if (action == "pack")
-                    {
-                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
-                                                          filePath.filename(),
-                                                          boost::filesystem::path(filePath.stem().string() +
-                                                                                  std::string("-repack.BUN")));
+                        auto *container = new EAGLEye::Containers::MWLocationContainer(stream, filePath);
+
+                        container->Get();
                     }
                     break;
                 }
@@ -158,11 +161,8 @@ int main(int argc, char **argv)
                         repackPath.append(filePath.filename().stem().string());
                         repackPath += "-repack.BUN";
 
-                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"), filePath.filename(), repackPath);
-
-//                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
-//                                                          filePath.filename(),
-//                                                          boost::filesystem::path(filePath.parent_path() + filePath.filename().stem() + std::string("-repack")));
+                        EAGLEye::Chunks::CombineFromFiles(boost::filesystem::absolute("chunk-dump"),
+                                                          filePath.filename(), repackPath);
                     }
 
                     break;
@@ -196,6 +196,55 @@ int main(int argc, char **argv)
                                                           filePath.filename(),
                                                           boost::filesystem::path(filePath.stem().string() +
                                                                                   std::string("-repack.BUN")));
+                    }
+                    break;
+                }
+                case 0x4: // UG2
+                {
+                    if (action.empty())
+                    {
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::UG2ChunkyContainer(stream);
+
+                            container->Get();
+                        }
+                    }
+                    break;
+                }
+                case 0x6: // PS
+                {
+                    if (action.empty())
+                    {
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::PSChunkyContainer(stream);
+
+                            container->Get();
+                        }
+                    } else if (action == "read-locbundle")
+                    {
+                        auto *container = new EAGLEye::Containers::PSLocationContainer(stream, filePath);
+
+                        container->Get();
+                    }
+                    break;
+                }
+                case 0x8: // UC
+                {
+                    if (action.empty())
+                    {
+                        if (fileType == EAGLEye::FileType::NORMAL)
+                        {
+                            auto *container = new EAGLEye::Containers::UndercoverChunkyContainer(stream);
+
+                            container->Get();
+                        }
+                    } else if (action == "read-locbundle")
+                    {
+                        auto *container = new EAGLEye::Containers::UndercoverLocationContainer(stream, filePath);
+
+                        container->Get();
                     }
                     break;
                 }
