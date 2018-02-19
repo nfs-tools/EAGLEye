@@ -210,7 +210,7 @@ namespace EAGLEye
 
                         break;
                     }
-                    case 0x33310005:
+                    case CARBON_TPK_PART_DXT_HEADERS:
                     {
                         for (auto &texture : m_tpk->textures)
                         {

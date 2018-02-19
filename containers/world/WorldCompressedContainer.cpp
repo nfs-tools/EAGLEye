@@ -54,9 +54,6 @@ namespace EAGLEye
                         compressed.resize(bzSize);
                         uncompressed.resize(bSize);
 
-//                        BYTE compressedData[bzSize];
-//                        BYTE uncompressedData[bSize];
-
                         m_stream.read((char *) &compressed[0], compressed.size());
 
                         uncompressed = JDLZ::decompress(compressed, bSize);

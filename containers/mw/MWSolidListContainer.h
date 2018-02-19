@@ -16,6 +16,25 @@ namespace EAGLEye
             BCHUNK_MW_SOLID_HASH_TABLE = 0x00134003,
             BCHUNK_MW_SOLID_OBJECT = 0x80134010,
             BCHUNK_MW_SOLID_OBJECT_HEADER = 0x00134011,
+
+            BCHUNK_MW_SOLID_OBJECT_MESH_HEADER = 0x80134100,
+            BCHUNK_MW_SOLID_OBJECT_MESH_VERTICES = 0x00134b01,
+            BCHUNK_MW_SOLID_OBJECT_MAT_ASSIGN = 0x00134b02,
+            BCHUNK_MW_SOLID_OBJECT_MESH_FACES = 0x00134b03,
+            BCHUNK_MW_SOLID_OBJECT_TEXTURE_USAGE = 0x00134012
+        };
+
+        struct PACK tMWVertex
+        {
+            float x, y, z;
+            float nx, ny, nz;
+            DWORD color;
+            float u, v;
+        };
+
+        struct PACK tMWFace
+        {
+            uint16_t vA, vB, vC;
         };
 
         struct MWSolidBINChunk

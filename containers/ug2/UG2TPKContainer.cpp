@@ -121,7 +121,9 @@ namespace EAGLEye
                             uint32_t resolution = BitConverter::ToUInt32(data, 0);
                             int32_t mipMap = BitConverter::ToInt32(data, 4);
 
-                            printf("#%d: %s [0x%08x/0x%08x, do=0x%08x, ds=0x%08x] | %d by %d [mipmap %d]\n", j + 1, name, textureHash, typeHash, dataOffset, dataSize, LOWORD(resolution), HIWORD(resolution), HIWORD(mipMap));
+                            printf("#%d: %s [0x%08x/0x%08x, do=0x%08x, ds=0x%08x] | %d by %d [mipmap %d]\n", j + 1,
+                                   name, textureHash, typeHash, dataOffset, dataSize, LOWORD(resolution),
+                                   HIWORD(resolution), HIWORD(mipMap));
                             hexdump(stdout, &data);
 
                             EAGLEye::Data::TextureInfo textureInfo{};
@@ -152,33 +154,33 @@ namespace EAGLEye
                         }
                         break;
                     }
-//                    case UG2_TPK_TEXTURE_DATA_CONTAINER:
-//                    {
-//                        m_stream.ignore(0x78);
-//                        bytesRead += 0x78;
-//
-//                        auto startPos = (long) m_stream.tellg();
-//
-//                        for (auto &j : m_tpk->textures)
-//                        {
-//                            auto &texture = *j.second;
-//
-//                            bytesRead += ((startPos + texture.dataOffset) - ((long) m_stream.tellg())); // what even?
-//                            m_stream.seekg(startPos + texture.dataOffset);
-//
-//                            BYTE data[texture.dataSize];
-//                            bytesRead += readGenericArray(m_stream, data, sizeof(data));
-//
-//                            std::ofstream ddsFile(texture.name + ".dds", std::ios::binary | std::ios::trunc);
-//                            EAGLEye::Data::tDDSHeader ddsHeader{};
-//
-//                            ddsHeader.init(texture);
-//                            writeGeneric(ddsFile, ddsHeader, 0x80);
-//
-//                            ddsFile.write((const char *) data, texture.dataSize);
-//                        }
-//                        break;
-//                    }
+                    case UG2_TPK_TEXTURE_DATA_CONTAINER:
+                    {
+                        m_stream.ignore(0x78);
+                        bytesRead += 0x78;
+
+                        auto startPos = (long) m_stream.tellg();
+
+                        for (auto &j : m_tpk->textures)
+                        {
+                            auto &texture = *j.second;
+
+                            bytesRead += ((startPos + texture.dataOffset) - ((long) m_stream.tellg())); // what even?
+                            m_stream.seekg(startPos + texture.dataOffset);
+
+                            BYTE data[texture.dataSize];
+                            bytesRead += readGenericArray(m_stream, data, sizeof(data));
+
+                            std::ofstream ddsFile(texture.name + ".dds", std::ios::binary | std::ios::trunc);
+                            EAGLEye::Data::tDDSHeader ddsHeader{};
+
+                            ddsHeader.init(texture);
+                            writeGeneric(ddsFile, ddsHeader, 0x80);
+
+                            ddsFile.write((const char *) data, texture.dataSize);
+                        }
+                        break;
+                    }
                     default:
                         break;
                 }

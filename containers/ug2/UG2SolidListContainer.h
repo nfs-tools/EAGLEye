@@ -19,14 +19,25 @@ namespace EAGLEye
             BCHUNK_UG2_SOLID_OBJECT = 0x80134010,
             BCHUNK_UG2_SOLID_OBJECT_HEADER = 0x00134011,
             BCHUNK_UG2_SOLID_OBJECT_MESH_HEADER = 0x80134100,
-            BCHUNK_UG2_SOLID_OBJECT_MESH_VERTICES = 0x00134b02,
+            BCHUNK_UG2_SOLID_OBJECT_MESH_VERTICES = 0x00134b01,
+            BCHUNK_UG2_SOLID_OBJECT_MAT_ASSIGN = 0x00134b02,
+            BCHUNK_UG2_SOLID_OBJECT_MESH_FACES = 0x00134b03,
+            BCHUNK_UG2_SOLID_OBJECT_TEXTURE_USAGE = 0x00134012
         };
 
         struct PACK tUGVertex
         {
-            float   x,y,z;
-            DWORD   color;
-            float   u,v;
+            float x, y, z;
+            DWORD color;
+            float u, v;
+        };
+
+        struct PACK tUGVertexV2
+        {
+            float x, y, z;
+            float nx, ny, nz;
+            DWORD color;
+            float u, v;
         };
 
         struct PACK tUGFace
@@ -52,9 +63,10 @@ namespace EAGLEye
             uint32_t m_containerSize;
 
             size_t ReadChunks(uint32_t totalSize) override;
+
             size_t ReadChunks(uint32_t totalSize, int depth);
 
-            Catalog* m_catalog;
+            Catalog *m_catalog;
         protected:
             static UG2SolidBINChunk g_chunks[];
         };

@@ -1,6 +1,7 @@
 #include "UG2ChunkyContainer.h"
 #include "UG2SolidListContainer.h"
 #include "UG2TPKContainer.h"
+#include "UG2AnimatedTPKContainer.h"
 
 namespace EAGLEye
 {
@@ -63,7 +64,13 @@ namespace EAGLEye
                     }
                     case BCHUNK_SPEED_TEXTURE_PACK_LIST_CHUNKS_ANIM:
                     {
-
+                        auto* tpkContainer = new UG2AnimatedTPKContainer(m_stream, size);
+                        tpkContainer->Get();
+                        break;
+                    }
+                    case BCHUNK_EAGLANIMATIONS:
+                    {
+                        dumpBytes(m_stream, size);
                     }
                     default:
 //                        printf("    * Passing unhandled chunk\n");

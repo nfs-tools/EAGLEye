@@ -7,7 +7,7 @@ namespace EAGLEye
     namespace Containers
     {
         UG2SolidBINChunk UG2SolidListContainer::g_chunks[] = {
-                {BCHUNK_UG2_SOLID_OBJECT_HEADER, 0x10, "Object header"},
+                {BCHUNK_UG2_SOLID_OBJECT_HEADER,        0x10, "Object header"},
                 {BCHUNK_UG2_SOLID_OBJECT_MESH_VERTICES, 0x10, "Vertices"},
         };
 
@@ -88,10 +88,10 @@ namespace EAGLEye
                         GeometryFileInfo geometryFileInfo{};
                         bytesRead += readGeneric(m_stream, geometryFileInfo);
 
-                        printf("%s [%s]\n", geometryFileInfo.path, geometryFileInfo.section);
-
                         this->m_catalog->path = std::string(geometryFileInfo.path);
                         this->m_catalog->section = std::string(geometryFileInfo.section);
+                        printf("%s    Catalog: %s [%s]\n", padStr.c_str(), this->m_catalog->path.c_str(),
+                               this->m_catalog->section.c_str());
 
                         break;
                     }
@@ -99,7 +99,7 @@ namespace EAGLEye
                     {
                         this->m_catalog->hashTable.resize(size / 8);
 
-                        printf("Objects: %zu\n", this->m_catalog->hashTable.size());
+                        printf("%s    Objects: %zu\n", padStr.c_str(), this->m_catalog->hashTable.size());
 
                         for (int j = 0; j < this->m_catalog->hashTable.size(); j++)
                         {
@@ -108,7 +108,7 @@ namespace EAGLEye
                             m_stream.ignore(4);
                             bytesRead += 4;
 
-                            printf("Object #%d: 0x%08x\n", j + 1, this->m_catalog->hashTable[j]);
+                            printf("%s    Object #%d: 0x%08x\n", padStr.c_str(), j + 1, this->m_catalog->hashTable[j]);
                         }
 
                         break;
@@ -130,7 +130,12 @@ namespace EAGLEye
                         bytesRead += nameLen - 1;
 
                         objectHeader.name = std::string(name);
-                        printf("%sObject: %s\n", padStr.c_str(), name);
+                        printf("%s    Object: %s\n", padStr.c_str(), name);
+
+                        EAGLEye::Data::SolidItem solidItem{};
+                        solidItem.name = objectHeader.name;
+
+                        m_catalog->items.emplace_back(solidItem);
 
                         break;
                     }
@@ -139,27 +144,95 @@ namespace EAGLEye
                         bytesRead += this->ReadChunks(size, 2);
                         break;
                     }
-                    case 0x00134b01: // vertices
+                    case BCHUNK_UG2_SOLID_OBJECT_MESH_VERTICES:
                     {
-                        for (int j = 0; j < size / sizeof(tUGVertex); j++)
+                        // Cars have different vertex formats... this is really a big hack. Why is this the case, though?
+                        if (m_catalog->section == "DEFAULT" &&
+                            m_catalog->path.find("\\CARS\\") != std::string::npos)
                         {
-                            tUGVertex vertex{};
-                            bytesRead += readGeneric(m_stream, vertex);
+                            for (int j = 0; j < size / sizeof(tUGVertexV2); j++)
+                            {
+                                tUGVertexV2 vertex{};
+                                bytesRead += readGeneric(m_stream, vertex);
 
-//                            printf("v %f %f %f\n", vertex.x, vertex.y, vertex.z);
+                                printf("v %f %f %f\n", vertex.x, vertex.y, vertex.z);
+
+                                EAGLEye::Data::MeshVertex meshVertex{};
+                                meshVertex.x = vertex.x;
+                                meshVertex.y = vertex.y;
+                                meshVertex.z = vertex.z;
+                                meshVertex.u = vertex.u;
+                                meshVertex.v = vertex.v;
+
+                                m_catalog->items[m_catalog->items.size() - 1].vertices.emplace_back(meshVertex);
+                            }
+                        } else
+                        {
+                            for (int j = 0; j < size / sizeof(tUGVertex); j++)
+                            {
+                                tUGVertex vertex{};
+                                bytesRead += readGeneric(m_stream, vertex);
+
+                                printf("v %f %f %f\n", vertex.x, vertex.y, vertex.z);
+
+                                EAGLEye::Data::MeshVertex meshVertex{};
+                                meshVertex.x = vertex.x;
+                                meshVertex.y = vertex.y;
+                                meshVertex.z = vertex.z;
+                                meshVertex.u = vertex.u;
+                                meshVertex.v = vertex.v;
+
+                                m_catalog->items[m_catalog->items.size() - 1].vertices.emplace_back(meshVertex);
+                            }
+                        }
+
+                        for (auto &vertex :  m_catalog->items[m_catalog->items.size() - 1].vertices)
+                        {
+                            printf("vt %f %f\n", vertex.u, vertex.v);
                         }
 
                         break;
                     }
-                    case 0x00134b03: // faces
+                    case BCHUNK_UG2_SOLID_OBJECT_MESH_FACES:
                     {
                         for (int j = 0; j < size / sizeof(tUGFace); j++)
                         {
                             tUGFace face{};
                             bytesRead += readGeneric(m_stream, face);
 
-//                            printf("f %d %d %d\n", face.vA + 1, face.vB + 1, face.vC + 1);
+                            printf("f %d %d %d\n", face.vA + 1, face.vB + 1, face.vC + 1);
+
+                            EAGLEye::Data::MeshFace meshFace{};
+                            meshFace.vA = face.vA;
+                            meshFace.vB = face.vB;
+                            meshFace.vC = face.vC;
+
+                            m_catalog->items[m_catalog->items.size() - 1].faces.emplace_back(meshFace);
                         }
+                        break;
+                    }
+                    case BCHUNK_UG2_SOLID_OBJECT_TEXTURE_USAGE:
+                    {
+                        /**
+                         * Each entry is a 4-byte hash + 4-byte padding (0x00)
+                         */
+
+                        size_t numTextures = size / 8;
+                        printf("%s    Number of Textures: %zu\n", padStr.c_str(), numTextures);
+
+                        for (int j = 0; j < numTextures; j++)
+                        {
+                            int hash;
+                            bytesRead += readGeneric(m_stream, hash);
+
+                            m_stream.ignore(4);
+                            bytesRead += 4;
+
+                            printf("%s    Texture #%d: 0x%08x\n", padStr.c_str(), j + 1, hash);
+
+                            m_catalog->items[m_catalog->items.size() - 1].textureIds.emplace_back(hash);
+                        }
+
                         break;
                     }
                     default:

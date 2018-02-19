@@ -37,6 +37,7 @@ namespace EAGLEye
             std::string path;
             std::string section;
             std::vector<int32_t> hashTable;
+            std::vector<SolidItem> items;
         };
     }
 }

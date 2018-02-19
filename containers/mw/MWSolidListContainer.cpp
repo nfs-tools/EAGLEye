@@ -5,7 +5,8 @@ namespace EAGLEye
     namespace Containers
     {
         MWSolidBINChunk MWSolidListContainer::g_chunks[] = {
-                {BCHUNK_MW_SOLID_OBJECT_HEADER, 0x10, "Object header"}
+                {BCHUNK_MW_SOLID_OBJECT_HEADER, 0x10, "Object header"},
+                {BCHUNK_MW_SOLID_OBJECT_MESH_VERTICES, 0x10, "Vertices"},
         };
 
         MWSolidListContainer::MWSolidListContainer(std::ifstream &stream, uint32_t containerSize)
@@ -106,6 +107,34 @@ namespace EAGLEye
 
                         objectHeader.name = std::string(name);
                         printf("        Object: %s\n", objectHeader.name.c_str());
+                        break;
+                    }
+                    case BCHUNK_MW_SOLID_OBJECT_MESH_HEADER:
+                    {
+                        bytesRead += this->ReadChunks(size);
+                        break;
+                    }
+                    /**
+                     * Kinda broken... need to fix.
+                     * All hail King 262212370559861843554378893038702297088.000000.
+                     */
+                    case BCHUNK_MW_SOLID_OBJECT_MESH_VERTICES:
+                    {
+                        for (int j = 0; j < size / sizeof(tMWVertex); j++)
+                        {
+                            tMWVertex vertex{};
+                            bytesRead += readGeneric(m_stream, vertex);
+                        }
+
+                        break;
+                    }
+                    case BCHUNK_MW_SOLID_OBJECT_MESH_FACES:
+                    {
+                        for (int j = 0; j < size / sizeof(tMWFace); j++)
+                        {
+                            tMWFace face{};
+                            bytesRead += readGeneric(m_stream, face);
+                        }
                         break;
                     }
                     default:

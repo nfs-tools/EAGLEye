@@ -1,5 +1,6 @@
 #include "PSChunkyContainer.h"
 #include "PSTPKContainer.h"
+#include "PSSolidListContainer.h"
 
 namespace EAGLEye
 {
@@ -56,7 +57,9 @@ namespace EAGLEye
                     }
                     case BCHUNK_SPEED_ESOLID_LIST_CHUNKS:
                     {
-                        dumpBytes(m_stream, 256);
+                        auto* solidListContainer = new PSSolidListContainer(m_stream, size);
+                        solidListContainer->Get();
+                        break;
                     }
                     default:
 //                        printf("    * Passing unhandled chunk\n");
