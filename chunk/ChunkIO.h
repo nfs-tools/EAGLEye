@@ -37,6 +37,23 @@ namespace EAGLEye
             unsigned char RestOfData[0x24]; // 92
         } *StreamInfo;
 
+        typedef struct PACK UG2StreamInfoStruct
+        {
+            char ModelGroupName[8]; // 8
+            unsigned int StreamChunkNumber; // 12
+            unsigned int Unk2; // 16
+            unsigned int MasterStreamChunkNumber; // 20
+            unsigned int MasterStreamChunkOffset; // 24
+            unsigned int Size1; // 28
+            unsigned int Size2; // 32
+            unsigned int Size3; // 36
+            float X; // 40
+            float Y; // 44
+            float Z; // 48
+            unsigned int StreamChunkHash; // 52
+            unsigned char RestOfData[0x1C]; // 80
+        } *UG2StreamInfo;
+
         void
         ExtractChunksToFolder(const boost::filesystem::path &filePath, const boost::filesystem::path &outFolderPath);
 

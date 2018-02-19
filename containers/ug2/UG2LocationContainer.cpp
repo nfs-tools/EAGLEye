@@ -10,18 +10,20 @@ namespace EAGLEye
         {
             long offset;
             long sectionSize = Chunks::SearchAlignedChunkByType(m_stream, 0x00034110, offset);
-            unsigned int numSections = sectionSize / sizeof(StreamInfoStruct);
+            unsigned int numSections = sectionSize / (8 + sizeof(Chunks::StreamInfoStruct));
 
-            printf("%lu\n", offset);
+            printf("Sections Offset:     %lu\n", offset);
+            printf("Number of Sections:  %d\n", numSections);
 
             m_stream.seekg(offset + 8);
+            m_stream.ignore(80);
 
             auto path = boost::filesystem::path(m_path).parent_path();
 
             path.append(std::string("STREAM") + m_path.filename().string());
 
             std::cout << path.string() << std::endl;
-            Chunks::StreamInfo streamInfo = Chunks::CreateStreamInfoBuffer(numSections);
+            auto streamInfo = (Chunks::UG2StreamInfo) malloc(sizeof(Chunks::UG2StreamInfoStruct) * numSections);
             std::ifstream mapStream(path.string(), std::ios::binary);
 
             for (int i = 0; i < numSections; i++)

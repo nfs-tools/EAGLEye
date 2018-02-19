@@ -58,11 +58,12 @@ namespace EAGLEye
         {
             MW_TPK = 0xb3310000,
             MW_TPK_TEXTURE_DATA_ROOT = 0xb3320000,
+            MW_TPK_TEXTURE_DATA_CONTAINER = 0x33320002,
             MW_TPK_PART_INFO = 0x33310001,
             MW_TPK_PART_HASHES = 0x33310002,
             MW_TPK_PART_DYNAMIC_DATA = 0x33310003,
             MW_TPK_PART_HEADERS = 0x33310004,
-            MW_TPK_PART_DXT_HEADERS = 0x3331005,
+            MW_TPK_PART_DXT_HEADERS = 0x33310005,
         };
 
         class MWTPKContainer : public Container<std::shared_ptr<TPK>>

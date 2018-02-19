@@ -7,10 +7,22 @@ namespace EAGLEye
 {
     namespace Data
     {
+        struct MeshVertex
+        {
+            float x, y, z, u, v;
+        };
+
+        struct MeshFace
+        {
+            short vA, vB, vC;
+        };
+
         struct SolidItem
         {
             std::string name;
-            int hash;
+            std::vector<int> textureIds;
+            std::vector<MeshVertex> vertices;
+            std::vector<MeshFace> faces;
         };
 
         class SolidCatalog
@@ -21,6 +33,10 @@ namespace EAGLEye
 
             ~SolidCatalog()
             = default;
+
+            std::string path;
+            std::string section;
+            std::vector<int32_t> hashTable;
         };
     }
 }

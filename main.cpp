@@ -22,6 +22,7 @@
 #include "containers/uc/UndercoverChunkyContainer.h"
 #include "containers/uc/UndercoverLocationContainer.h"
 #include "containers/ug2/UG2ChunkyContainer.h"
+#include "containers/ug2/UG2LocationContainer.h"
 #include "containers/prostreet/PSChunkyContainer.h"
 #include "containers/prostreet/PSLocationContainer.h"
 
@@ -209,6 +210,11 @@ int main(int argc, char **argv)
 
                             container->Get();
                         }
+                    } else if (action == "read-locbundle")
+                    {
+                        auto *container = new EAGLEye::Containers::UG2LocationContainer(stream, filePath);
+
+                        container->Get();
                     }
                     break;
                 }

@@ -10,7 +10,7 @@ namespace EAGLEye
         {
             long offset;
             long sectionSize = Chunks::SearchAlignedChunkByType(m_stream, 0x00034110, offset);
-            unsigned int numSections = sectionSize / sizeof(StreamInfoStruct);
+            unsigned int numSections = sectionSize / sizeof(Chunks::StreamInfoStruct);
 
             printf("%lu\n", offset);
 

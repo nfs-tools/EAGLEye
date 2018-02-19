@@ -16,8 +16,10 @@ typedef float vec4[4];
 
 #define PACK __attribute__((__packed__))
 
-// BIN_ID: Strips the high byte of a chunk ID (read as little-endian integers)
+// BIN_ID: Strips the high byte of a chunk ID; we don't really need this, but it's here anyway
 #define BIN_ID(n) ((DWORD) (n) & 0xFFFFFF)
+// BIN_CONTAINER: Determines if a chunk ID represents a container chunk.
+#define BIN_CONTAINER(n) ((DWORD)(n) & 0x80000000)
 #define LOWORD(a) ((WORD)(a))
 #define HIWORD(a) ((WORD)(((DWORD)(a) >> 16) & 0xFFFF))
 

@@ -2,7 +2,6 @@
 #include "CarbonTPKContainer.h"
 #include "CarbonLanguageContainer.h"
 #include "CarbonFontContainer.h"
-#include "CarbonSectionsContainer.h"
 #include "CarbonSceneryContainer.h"
 #include "CarbonTriggerPackContainer.h"
 #include "CarbonSolidListContainer.h"
@@ -123,13 +122,6 @@ namespace EAGLEye
                     {
                         auto *fontContainer = new CarbonFontContainer(m_stream, size);
                         auto font = fontContainer->Get();
-
-                        break;
-                    }
-                    case BCHUNK_TRACKSTREAMER_SECTIONS:
-                    {
-                        auto *sectionsContainer = new CarbonSectionsContainer(m_stream, size);
-                        sectionsContainer->Get();
 
                         break;
                     }

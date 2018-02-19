@@ -5,24 +5,6 @@
 
 namespace EAGLEye
 {
-    typedef struct StreamInfoStruct
-    {
-        char ModelGroupName[8];
-        unsigned int StreamChunkNumber;
-        unsigned int Unk2;
-        unsigned int MasterStreamChunkNumber;
-        unsigned int MasterStreamChunkOffset;
-        unsigned int Size1;
-        unsigned int Size2;
-        unsigned int Size3;
-        unsigned int Unk3;
-        float X;
-        float Y;
-        float Z;
-        unsigned int StreamChunkHash;
-        unsigned char RestOfData[0x24];
-    } *StreamInfo;
-
     static const std::map<std::string, int> gameMap = {
             {"MW05",   0x2},
             {"UG2",    0x4},

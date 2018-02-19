@@ -9,6 +9,16 @@ namespace EAGLEye
         void UG2ChunkyContainer::Get()
         {
             long fileLength = getFileLength(this->m_stream);
+
+            if (m_options.start != -1 && m_options.end != -1)
+            {
+                assert(m_options.end > m_options.start);
+
+                fileLength = m_options.end - m_options.start;
+
+                m_stream.seekg(m_options.start);
+            }
+
             printf("Here we are! File length: %lu\n", fileLength);
 
             this->ReadChunks(static_cast<uint32_t>(fileLength));
@@ -50,6 +60,10 @@ namespace EAGLEye
                         auto* tpkContainer = new UG2TPKContainer(m_stream, size);
                         tpkContainer->Get();
                         break;
+                    }
+                    case BCHUNK_SPEED_TEXTURE_PACK_LIST_CHUNKS_ANIM:
+                    {
+
                     }
                     default:
 //                        printf("    * Passing unhandled chunk\n");

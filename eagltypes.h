@@ -48,6 +48,7 @@ namespace EAGLEye
         Point3D maxPoint; // +16 = 64
         Matrix matrix; // +64 = 128
         DWORD unk3[8]; // +32 = 160
+        BYTE blnk[4];
         std::string name;
     };
 }

@@ -90,22 +90,96 @@ namespace EAGLEye
                     {
                         for (int j = 0; j < m_tpk->hashTable.size(); j++)
                         {
-                            tTextureHeader textureHeader{};
-                            bytesRead += readGeneric(m_stream, textureHeader);
+                            m_stream.ignore(0xC);
+                            bytesRead += 0xC;
 
-                            BYTE data[88];
-                            m_stream.read((char *) &data[0], sizeof(data));
+                            char name[24];
+                            bytesRead += readGenericArray(m_stream, name, sizeof(name));
 
-                            int32_t hash = BitConverter::ToInt32(data, 0);
-                            int32_t hash2 = BitConverter::ToInt32(data, 4);
+                            int32_t textureHash, typeHash;
+                            uint32_t dataOffset, dataSize;
 
-                            printf("#%d: %s [0x%08x/0x%08x]\n",
-                                   j + 1, textureHeader.name, hash, hash2);
+                            bytesRead += readGeneric(m_stream, textureHash);
+                            bytesRead += readGeneric(m_stream, typeHash);
 
-                            hexdump(stdout, &data, sizeof(data));
+                            m_stream.ignore(4);
+                            bytesRead += 4;
 
-                            bytesRead += sizeof(data);
+                            bytesRead += readGeneric(m_stream, dataOffset);
+
+                            m_stream.ignore(4);
+                            bytesRead += 4;
+
+                            bytesRead += readGeneric(m_stream, dataSize);
+
+                            assert(dataSize > 0); // Texture data cannot be blank!
+
+                            m_stream.ignore(8);
+                            bytesRead += 8;
+
+                            BYTE data[56];
+                            bytesRead += readGenericArray(m_stream, data, sizeof(data));
+
+                            uint32_t resolution = BitConverter::ToUInt32(data, 0);
+                            int32_t mipMap = BitConverter::ToInt32(data, 4);
+
+                            printf("#%d: %s [0x%08x/0x%08x, do=0x%08x, ds=0x%08x] | %d by %d [mipmap %d]\n", j + 1, name, textureHash, typeHash, dataOffset, dataSize, LOWORD(resolution), HIWORD(resolution), HIWORD(mipMap));
+                            hexdump(stdout, &data);
+
+                            EAGLEye::Data::TextureInfo textureInfo{};
+                            textureInfo.name = std::string(name);
+                            textureInfo.hash = textureHash;
+                            textureInfo.type = typeHash;
+                            textureInfo.dataOffset = dataOffset;
+                            textureInfo.dataSize = dataSize;
+                            textureInfo.mipMap = HIWORD(mipMap);
+                            textureInfo.width = LOWORD(resolution);
+                            textureInfo.height = HIWORD(resolution);
+
+                            m_tpk->textures[textureHash] = std::make_shared<EAGLEye::Data::TextureInfo>(textureInfo);
                         }
+                        break;
+                    }
+                    case MW_TPK_PART_DXT_HEADERS:
+                    {
+                        for (auto &texture : m_tpk->textures)
+                        {
+                            m_stream.seekg(0xC, m_stream.cur);
+                            bytesRead += 0x0C;
+                            bytesRead += readGeneric(m_stream, texture.second->ddsType, 0x4);
+                            m_stream.seekg(0x08, m_stream.cur);
+                            bytesRead += 0x08;
+
+                            printf("DDS Type: 0x%08x\n", texture.second->ddsType);
+                        }
+                        break;
+                    }
+                    case MW_TPK_TEXTURE_DATA_CONTAINER:
+                    {
+                        m_stream.ignore(0x78);
+                        bytesRead += 0x78;
+
+                        auto startPos = (long) m_stream.tellg();
+
+                        for (auto &j : m_tpk->textures)
+                        {
+                            auto &texture = *j.second;
+
+                            bytesRead += ((startPos + texture.dataOffset) - ((long) m_stream.tellg())); // what even?
+                            m_stream.seekg(startPos + texture.dataOffset);
+
+                            BYTE data[texture.dataSize];
+                            bytesRead += readGenericArray(m_stream, data, sizeof(data));
+
+                            std::ofstream ddsFile(texture.name + ".dds", std::ios::binary | std::ios::trunc);
+                            EAGLEye::Data::tDDSHeader ddsHeader{};
+
+                            ddsHeader.init(texture);
+                            writeGeneric(ddsFile, ddsHeader, 0x80);
+
+                            ddsFile.write((const char *) data, texture.dataSize);
+                        }
+
                         break;
                     }
                     default:

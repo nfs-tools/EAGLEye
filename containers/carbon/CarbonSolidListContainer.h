@@ -27,7 +27,7 @@ namespace EAGLEye
         };
 
 #pragma pack(push,2)
-        struct tVertex
+        struct tCarbonVertex
         {
             float   x,y,z;
             float   nx,ny,nz;
